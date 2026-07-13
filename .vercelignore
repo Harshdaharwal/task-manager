@@ -1,0 +1,11 @@
+.git
+node_modules
+.env
+.env.*
+!.env.example
+credentials.json
+whatsapp.config.js
+GOOGLE_CREDENTIALS*
+*.zip
+.claude
+.vscode
