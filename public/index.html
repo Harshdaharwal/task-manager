@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Task Manager — Sign In</title>
+<meta name="description" content="Sign in to Task Manager — task delegation and checklist platform."/>
+<link rel="icon" type="image/svg+xml" href="/task-logo.svg"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg-color: #f6f3fc;
+    --card-bg: #ffffff;
+    --text-primary: #241a3f;
+    --text-secondary: #6f6a7c;
+    --accent-purple: #8b5cf6;
+    --accent-purple-dark: #6d28d9;
+    --input-bg: #f7f4ff;
+    --input-border: #ddd6fe;
+    --input-focus: #6d28d9;
+    --label-color: #4c1d95;
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box;}
+
+  body {
+    font-family:'Inter',sans-serif;
+    background: var(--bg-color);
+    background-image: 
+      radial-gradient(circle at top left, rgba(139, 92, 246, 0.08) 0%, transparent 40%),
+      radial-gradient(circle at bottom right, rgba(124, 58, 237, 0.05) 0%, transparent 50%);
+    min-height:100vh;
+    display:flex;align-items:center;justify-content:center;
+    overflow:hidden;
+    position:relative;
+  }
+
+  /* Subtle background grid */
+  .bg-grid {
+    position:fixed;inset:0;z-index:0;pointer-events:none;
+    background-image:
+      linear-gradient(rgba(109, 40, 217, 0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(109, 40, 217, 0.015) 1px, transparent 1px);
+    background-size:40px 40px;
+  }
+
+  .wrap {
+    position:relative;z-index:10;
+    width:100%;max-width:360px;padding:16px;
+  }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--card-bg);
+    border-radius:24px;
+    padding:36px 28px 32px;
+    box-shadow:
+      0 15px 35px rgba(109, 40, 217, 0.08),
+      0 5px 15px rgba(0, 0, 0, 0.04);
+    position:relative;overflow:hidden;
+    animation:cardIn .65s cubic-bezier(.34,1.56,.64,1) both;
+  }
+
+  /* Accent top bar */
+  .card-top-bar {
+    height:4px;
+    background:linear-gradient(90deg, var(--accent-purple) 0%, var(--accent-purple-dark) 100%);
+    position:absolute;top:0;left:0;right:0;
+  }
+
+  /* ── BRAND LOGO INSIDE CARD ── */
+  .brand-logo-section {
+    text-align:center;margin-bottom:24px;
+  }
+  .brand-logo-banner {
+    width:96px;height:44px;border-radius:10px;margin:0 auto 10px;
+    background:#ffffff;
+    display:grid;place-items:center;position:relative;
+    box-shadow:
+      0 0 0 1px rgba(139, 92, 246, 0.35),
+      0 4px 12px rgba(0,0,0,0.1);
+    overflow:hidden;
+  }
+  .brand-logo-banner img {
+    width:100%;height:100%;object-fit:contain;
+  }
+  .logo-sub {
+    font-size:10px;font-weight:700;letter-spacing:3px;
+    color:var(--accent-purple-dark);text-transform:uppercase;
+    margin-bottom:6px;
+  }
+  
+  /* Gold dots matching image layout */
+  .logo-dots {
+    display:flex;justify-content:center;gap:4px;margin-bottom:8px;
+  }
+  .logo-dots span {
+    width:5px;height:5px;border-radius:50%;
+    background:var(--accent-purple);
+  }
+  .logo-dots span:nth-child(2) { background: var(--accent-purple-dark); }
+  .logo-dots span:nth-child(3) { background: #2563eb; }
+
+  /* ── CARD HEADING ── */
+  .card-title {
+    font-size:20px;font-weight:800;color:var(--text-primary);
+    margin-bottom:3px;text-align:center;letter-spacing:-0.3px;
+  }
+  .card-sub {
+    font-size:13px;color:var(--text-secondary);
+    margin-bottom:24px;text-align:center;
+  }
+
+  /* ── FORM ── */
+  .form-group {margin-bottom:18px;}
+  
+  label {
+    display:block;font-size:10px;font-weight:700;letter-spacing:1px;
+    text-transform:uppercase;color:var(--label-color);margin-bottom:6px;
+  }
+  
+  .input-wrap {position:relative;}
+  
+  .input-icon {
+    position:absolute;left:16px;top:50%;transform:translateY(-50%);
+    font-size:15px;color:#a78bfa;pointer-events:none;
+    transition:color .2s;
+  }
+  
+  input {
+    width:100%;
+    padding:12px 14px 12px 42px;
+    background:var(--input-bg);
+    border:1.5px solid var(--input-border);
+    border-radius:12px;
+    font-size:14px;font-family:'Inter',sans-serif;
+    color:var(--text-primary);outline:none;
+    transition:all .25s ease;
+  }
+  input::placeholder{color:#a89fc0;}
+  input:focus {
+    border-color:var(--input-focus);
+    background:#ffffff;
+    box-shadow:0 0 0 3px rgba(124, 58, 237, 0.12);
+  }
+  input:focus ~ .input-icon,
+  .input-wrap:focus-within .input-icon { color:var(--accent-purple-dark); }
+
+  /* ── ERROR ── */
+  .error {
+    display:none;background:rgba(220,38,38,0.06);
+    border:1px solid rgba(220,38,38,0.2);
+    color:#b91c1c;padding:10px 14px;
+    border-radius:12px;font-size:13px;margin-bottom:14px;
+    animation:shake .35s ease;text-align:center;
+  }
+  @keyframes shake {
+    0%,100%{transform:translateX(0);}
+    25%{transform:translateX(-6px);}
+    75%{transform:translateX(6px);}
+  }
+
+  /* ── BUTTON ── */
+  .btn-login {
+    width:100%;padding:13px;margin-top:6px;
+    background:linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-purple-dark) 100%);
+    color:#ffffff;border:none;border-radius:12px;
+    font-size:14px;font-weight:700;font-family:'Inter',sans-serif;
+    cursor:pointer;position:relative;overflow:hidden;
+    transition:all .2s;
+    box-shadow:0 6px 18px rgba(124, 58, 237, 0.25);
+    letter-spacing:.3px;
+  }
+  .btn-login:hover {
+    transform:translateY(-1.5px);
+    background:linear-gradient(135deg, #9d7bfa 0%, var(--accent-purple-dark) 100%);
+    box-shadow:0 8px 22px rgba(124, 58, 237, 0.35);
+  }
+  .btn-login:active{transform:translateY(0);}
+  .btn-login:disabled{opacity:.55;cursor:not-allowed;transform:none;}
+
+  /* Loading spinner inside button */
+  .btn-login .spinner {
+    display:none;width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);
+    border-top-color:#fff;border-radius:50%;
+    animation:spin .7s linear infinite;
+    margin:0 auto;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .btn-login.loading .btn-text{display:none;}
+  .btn-login.loading .spinner{display:block;}
+
+  /* ── FOOTER ── */
+  .footer {
+    text-align:center;font-size:11px;color:var(--text-secondary);
+    margin-top:24px;letter-spacing:.3px;
+  }
+  .footer strong{color:var(--accent-purple-dark);}
+
+  @keyframes cardIn {
+    from{opacity:0;transform:translateY(24px) scale(.97);}
+    to{opacity:1;transform:translateY(0) scale(1);}
+  }
+  @keyframes fadeDown {
+    from{opacity:0;transform:translateY(-15px);}
+    to{opacity:1;transform:translateY(0);}
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+
+<div class="wrap">
+
+  <!-- Card -->
+  <div class="card">
+    <div class="card-top-bar"></div>
+
+    <!-- Brand Logo Section Inside Card -->
+    <div class="brand-logo-section">
+      <div class="brand-logo-banner">
+        <img src="/task-logo.svg" alt="Task Manager Logo"
+             onerror="this.style.display='none';this.nextElementSibling.style.display='block'"/>
+        <span class="logo-fallback" style="display:none">✓</span>
+      </div>
+      <div class="logo-sub">Plan · Track · Deliver</div>
+      <div class="logo-dots">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    </div>
+
+    <div class="card-title">Welcome back 👋</div>
+    <div class="card-sub">Sign in to continue to your workspace</div>
+
+    <div class="error" id="err"></div>
+
+    <div class="form-group">
+      <label for="email">Email Address</label>
+      <div class="input-wrap">
+        <span class="input-icon">✉</span>
+        <input type="email" id="email" placeholder="you@example.com" autocomplete="email" autocapitalize="none" autocorrect="off" required/>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="password">Password</label>
+      <div class="input-wrap">
+        <span class="input-icon">🔒</span>
+        <input type="password" id="password" placeholder="Enter your password" required onkeydown="if(event.key==='Enter')login()"/>
+      </div>
+    </div>
+
+    <button class="btn-login" id="loginBtn" onclick="login()">
+      <span class="btn-text">Sign In &rarr;</span>
+      <div class="spinner"></div>
+    </button>
+
+    <div class="footer">
+      <strong>Task Manager</strong> &nbsp;·&nbsp; Secure Workspace
+    </div>
+  </div>
+
+</div>
+
+<script>
+// Agar already logged in hai toh seedha /app pe bhejo
+(async function checkExistingSession() {
+  try {
+    const r = await fetch('/api/me', { credentials: 'include' });
+    if (r.ok) { window.location.replace('/app'); }
+  } catch(e) {}
+})();
+
+async function login(){
+  const email    = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const err      = document.getElementById('err');
+  const btn      = document.getElementById('loginBtn');
+
+  err.style.display = 'none';
+
+  if(!email || !password){
+    err.textContent = 'Please fill all fields';
+    err.style.display = 'block';
+    return;
+  }
+
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  try {
+    const r = await fetch('/api/login', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      credentials:'include',
+      body: JSON.stringify({email, password})
+    });
+    const d = await r.json();
+    if(!r.ok){
+      err.textContent = d.error || 'Login failed';
+      err.style.display = 'block';
+      btn.classList.remove('loading');
+      btn.disabled = false;
+      return;
+    }
+    // Token backup for cookie-blocked environments
+    if(d.token) localStorage.setItem('authToken', d.token);
+    window.location.replace('/app');
+  } catch(e) {
+    err.textContent = 'Server error. Please try again.';
+    err.style.display = 'block';
+    btn.classList.remove('loading');
+    btn.disabled = false;
+  }
+}
+</script>
+</body>
+</html>
