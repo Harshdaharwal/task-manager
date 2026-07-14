@@ -543,6 +543,69 @@ async function ensureMySqlSchema(pool) {
   console.log(added ? `  schema auto-migrate: ${added} column(s)/table(s) added` : '  schema up to date');
 }
 
+// ══════════════════════════════════════════════════════
+// DEMO DB LAYER — in-memory, bina kisi real database ke.
+// DB_DRIVER=demo par activate hota hai. Same interface as SheetDB/MySqlDB.
+// ⚠️ Data sirf RAM me rehta hai — server restart par sab reset. Sirf demo ke liye.
+// ══════════════════════════════════════════════════════
+class MemDB {
+  constructor(sheetsClient) {
+    this.sheets = sheetsClient;   // FMS/Forms external-sheet features ke liye
+    this._cache = {};
+    this._hdrCache = {};
+    this._tables = {};
+    for (const [table, cols] of Object.entries(MYSQL_SCHEMA)) {
+      this._tables[table] = { headers: ['id', ...Object.keys(cols)], rows: [] };
+      this._hdrCache[table] = this._tables[table].headers;
+    }
+  }
+  _invalidate() {}
+  _tab(t) { const tab = this._tables[t]; if (!tab) throw new Error(`Table not found: ${t}`); return tab; }
+  async getHeaders(t) { return this._tab(t).headers; }
+  async findAll(t) { return this._tab(t).rows; }
+  async findWhere(t, filter) {
+    return (await this.findAll(t)).filter(row =>
+      Object.keys(filter).every(k => String(row[k] || '').trim() === String(filter[k] || '').trim()));
+  }
+  async findOne(t, filter) { return (await this.findWhere(t, filter))[0] || null; }
+  async insert(t, data) {
+    const tab = this._tab(t);
+    let maxId = 0;
+    for (const r of tab.rows) { const rid = parseInt(r.id) || 0; if (rid > maxId) maxId = rid; }
+    data.id = String(maxId + 1);
+    const obj = {};
+    tab.headers.forEach(h => { obj[h] = data[h] != null ? String(data[h]) : ''; });
+    tab.rows.push(obj);
+    return data;
+  }
+  async batchInsert(t, rows) {
+    if (!rows || !rows.length) return [];
+    for (const r of rows) await this.insert(t, r);
+    return rows;
+  }
+  async update(t, id, data) {
+    const tab = this._tab(t);
+    const row = tab.rows.find(r => String(r.id || '').trim() === String(id).trim());
+    if (!row) throw new Error(`Row id=${id} not found in ${t}`);
+    for (const h of tab.headers) {
+      if (data[h] !== undefined && data[h] !== null) row[h] = String(data[h]);
+    }
+    return { ...row };
+  }
+  async delete(t, id) {
+    const tab = this._tab(t);
+    const idx = tab.rows.findIndex(r => String(r.id || '').trim() === String(id).trim());
+    if (idx < 0) throw new Error(`Row id=${id} not found in ${t}`);
+    tab.rows.splice(idx, 1);
+  }
+  async batchDeleteByIds(t, ids) {
+    if (!ids || !ids.length) return;
+    const idSet = new Set(ids.map(x => String(x).trim()));
+    const tab = this._tab(t);
+    tab.rows = tab.rows.filter(r => !idSet.has(String(r.id || '').trim()));
+  }
+}
+
 // Global db instance
 let db = null;
 let dbInitializationPromise = null;
@@ -550,7 +613,14 @@ let dbInitializationPromise = null;
 async function initializeDatabase() {
   const driver = (process.env.DB_DRIVER || 'sheets').toLowerCase();
 
-  if (driver === 'mysql') {
+  if (driver === 'demo') {
+    // Google client optional — mile to FMS/Forms external sheets bhi chalenge
+    let sheetsApi = null;
+    try { sheetsApi = await getSheetsClient(); }
+    catch (e) { console.log('  Google Sheets client unavailable — FMS/Forms sheet features disabled:', e.message); }
+    db = new MemDB(sheetsApi);
+    console.log('  ⚠️ DEMO MODE — in-memory database (restart par data reset ho jata hai)');
+  } else if (driver === 'mysql') {
     // Google client is still needed for the FMS feature — load it but don't
     // fail MySQL startup if credentials are unavailable.
     let sheetsApi = null;
@@ -575,7 +645,7 @@ async function initializeDatabase() {
     console.log(`  MySQL DB connected (${process.env.DB_NAME})`);
   } else {
     if (!SHEET_ID) {
-      throw new Error('Database connected nahi hai — .env me SHEET_ID set karo (ya DB_DRIVER=mysql + DB_* values). Naya database milne par yahin connect hoga.');
+      throw new Error('Database connected nahi hai — .env me SHEET_ID set karo (ya DB_DRIVER=mysql + DB_* values, ya bina DB ke chalane ke liye DB_DRIVER=demo). Naya database milne par yahin connect hoga.');
     }
     const sheetsApi = await getSheetsClient();
     await withRetry(() => sheetsApi.spreadsheets.get({ spreadsheetId: SHEET_ID, fields: 'spreadsheetId' }));
