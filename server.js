@@ -505,6 +505,11 @@ const MYSQL_SCHEMA = {
     sheet_id: "VARCHAR(255) DEFAULT ''", header_row: "VARCHAR(10) DEFAULT '1'",
     total_steps: "VARCHAR(10) DEFAULT '1'", steps_json: "TEXT", created_at: "VARCHAR(40) DEFAULT ''"
   },
+  Forms_Config: {
+    form_name: "VARCHAR(255) DEFAULT ''", sheet_name: "VARCHAR(255) DEFAULT ''",
+    sheet_id: "VARCHAR(255) DEFAULT ''", header_row: "VARCHAR(10) DEFAULT '1'",
+    fields_json: "TEXT", created_at: "VARCHAR(40) DEFAULT ''"
+  },
   Leaves: {
     user_id: "VARCHAR(20) DEFAULT ''", from_date: "VARCHAR(40) DEFAULT ''", to_date: "VARCHAR(40) DEFAULT ''",
     leave_type: "VARCHAR(40) DEFAULT ''", reason: "TEXT", status: "VARCHAR(20) DEFAULT 'pending'",
@@ -2655,6 +2660,157 @@ app.get('/api/fms/:id/sync', requireAuth, requireAdmin, async (req, res) => {
     const totalRows = Math.max(0, (dataRes.data.values?.length || 0) - headerRow);
     res.json({ success: true, headers: headersToObjects(rawHeaders), headerRow, totalRows, sample: [] });
   } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// ══════════════════════════════════════════════════════
+// FORMS — form builder (FMS jaisa: external sheet me rows add karta hai)
+// ══════════════════════════════════════════════════════
+
+// Helper: ensure Forms_Config tab exists in main spreadsheet
+async function ensureFormsConfigTab(d) {
+  try {
+    await d.findAll('Forms_Config');
+  } catch(e) {
+    try {
+      await withRetry(() => d.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SHEET_ID,
+        requestBody: { requests: [{ addSheet: { properties: { title: 'Forms_Config' } } }] }
+      }));
+    } catch(e2) { /* already exists race */ }
+    await withRetry(() => d.sheets.spreadsheets.values.update({
+      spreadsheetId: SHEET_ID,
+      range: 'Forms_Config!A1:G1',
+      valueInputOption: 'USER_ENTERED',
+      requestBody: { values: [['id','form_name','sheet_name','sheet_id','header_row','fields_json','created_at']] }
+    }));
+    delete d._hdrCache['Forms_Config'];
+    delete d._cache['Forms_Config'];
+  }
+}
+
+// Parse form row from sheet
+function parseFormRow(row) {
+  let fields = [];
+  try { fields = JSON.parse(row.fields_json || '[]'); } catch(e) {}
+  return {
+    id: parseInt(row.id),
+    form_name: row.form_name || row.sheet_name,
+    sheet_name: row.sheet_name,
+    sheet_id: row.sheet_id,
+    header_row: parseInt(row.header_row) || 1,
+    fields,
+    created_at: row.created_at
+  };
+}
+
+// GET /api/forms — list all (sab dekhi sakte hain, fill karne ke liye)
+app.get('/api/forms', requireAuth, async (req, res) => {
+  try {
+    const d = await getDB();
+    await ensureFormsConfigTab(d);
+    const rows = await d.findAll('Forms_Config');
+    res.json(rows.map(parseFormRow));
+  } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/forms/:id — single form with fields
+app.get('/api/forms/:id', requireAuth, async (req, res) => {
+  try {
+    const d = await getDB();
+    await ensureFormsConfigTab(d);
+    const row = await d.findOne('Forms_Config', { id: String(req.params.id) });
+    if (!row) return res.status(404).json({ error: 'Form not found' });
+    res.json(parseFormRow(row));
+  } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/forms — create (admin only)
+app.post('/api/forms', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const d = await getDB();
+    await ensureFormsConfigTab(d);
+    const { formName, sheetName, sheetId, headerRow, fields } = req.body;
+    if (!sheetName || !sheetId) return res.status(400).json({ error: 'sheetName aur sheetId required hain' });
+    const nowStr = new Date().toISOString().replace('T',' ').split('.')[0];
+    const inserted = await d.insert('Forms_Config', {
+      form_name: formName || sheetName,
+      sheet_name: sheetName,
+      sheet_id: extractSheetId(sheetId),
+      header_row: String(parseInt(headerRow)||1),
+      fields_json: JSON.stringify(fields || []),
+      created_at: nowStr
+    });
+    res.json({ id: parseInt(inserted.id), ...inserted });
+  } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// PUT /api/forms/:id — update (admin only)
+app.put('/api/forms/:id', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const d = await getDB();
+    const { formName, sheetName, sheetId, headerRow, fields } = req.body;
+    const upd = {};
+    if (formName !== undefined)  upd.form_name  = formName;
+    if (sheetName !== undefined) upd.sheet_name = sheetName;
+    if (sheetId !== undefined)   upd.sheet_id   = extractSheetId(sheetId);
+    if (headerRow !== undefined) upd.header_row = String(parseInt(headerRow)||1);
+    if (fields !== undefined)    upd.fields_json = JSON.stringify(fields);
+    await d.update('Forms_Config', req.params.id, upd);
+    res.json({ success: true });
+  } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// DELETE /api/forms/:id (admin only)
+app.delete('/api/forms/:id', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const d = await getDB();
+    await d.delete('Forms_Config', req.params.id);
+    res.json({ success: true });
+  } catch(err) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/forms/:id/submit — form fill karke external sheet me row append
+app.post('/api/forms/:id/submit', requireAuth, async (req, res) => {
+  try {
+    const d = await getDB();
+    await ensureFormsConfigTab(d);
+    const row = await d.findOne('Forms_Config', { id: String(req.params.id) });
+    if (!row) return res.status(404).json({ error: 'Form not found' });
+    const form = parseFormRow(row);
+    const values = req.body.values || {};
+
+    // Sheet ke current headers padho taaki row sahi columns me align ho
+    const spreadsheetId = extractSheetId(form.sheet_id);
+    const hdrRes = await withRetry(() => d.sheets.spreadsheets.values.get({
+      spreadsheetId, range: `${form.sheet_name}!${form.header_row}:${form.header_row}`
+    }));
+    const headers = hdrRes.data.values?.[0] || [];
+    if (!headers.length) return res.status(400).json({ error: 'Sheet headers nahi mile — form config check karo' });
+
+    // Header name se value map karo (case-insensitive)
+    const valMap = {};
+    Object.keys(values).forEach(k => { valMap[String(k).trim().toLowerCase()] = values[k]; });
+    const rowArr = headers.map(h => {
+      const v = valMap[String(h).trim().toLowerCase()];
+      return v === undefined || v === null ? '' : String(v);
+    });
+
+    await withRetry(() => d.sheets.spreadsheets.values.append({
+      spreadsheetId,
+      range: `${form.sheet_name}!A${form.header_row}`,
+      valueInputOption: 'USER_ENTERED',
+      insertDataOption: 'INSERT_ROWS',
+      requestBody: { values: [rowArr] }
+    }));
+    res.json({ success: true });
+  } catch(err) {
+    let msg = err.message || 'Unknown error';
+    if (msg.includes('403') || msg.toLowerCase().includes('forbidden'))
+      msg = 'Access denied (403) — sheet ko service account email ke saath Editor access de kar share karo';
+    else if (msg.includes('404') || msg.toLowerCase().includes('not found'))
+      msg = 'Sheet not found (404) — Sheet ID ya Tab name galat hai';
+    res.status(500).json({ error: msg });
+  }
 });
 
 // GET /api/fms-tasks — list FMS configs (for task view dropdown)
