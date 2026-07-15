@@ -251,6 +251,35 @@ tbody tr:last-child td{border-bottom:none;}
 .alert.error{background:#fef2f2;border:1px solid #fecaca;color:#dc2626;}
 .empty{text-align:center;padding:36px;color:#94a3b8;font-size:13px;}
 
+/* ══ FORMS ══ */
+.fm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px;}
+.fm-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:12px;transition:all .25s;position:relative;overflow:hidden;}
+.fm-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#7c3aed,#a78bfa);opacity:0;transition:opacity .25s;}
+.fm-card:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(124,58,237,.14);border-color:#c4b5fd;}
+.fm-card:hover::before{opacity:1;}
+.fm-ico{width:46px;height:46px;border-radius:13px;background:linear-gradient(135deg,#7c3aed,#a78bfa);display:grid;place-items:center;font-size:21px;box-shadow:0 4px 12px rgba(124,58,237,.3);flex-shrink:0;}
+.fm-chip{display:inline-flex;align-items:center;gap:4px;background:#f5f3ff;color:#6d28d9;border:1px solid #ede9fe;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;white-space:nowrap;}
+.fm-field-row{background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:11px 14px;transition:all .2s;display:flex;flex-direction:column;gap:9px;}
+.fm-field-row:hover{border-color:#c4b5fd;box-shadow:0 2px 8px rgba(124,58,237,.08);}
+.fm-field-row.off{opacity:.5;background:#f8fafc;}
+.fm-field-top{display:flex;align-items:center;gap:11px;flex-wrap:wrap;}
+.fm-switch{position:relative;width:38px;height:21px;flex-shrink:0;cursor:pointer;display:inline-block;}
+.fm-switch input{opacity:0;width:0;height:0;}
+.fm-slider{position:absolute;inset:0;background:#cbd5e1;border-radius:20px;transition:.2s;}
+.fm-slider::before{content:'';position:absolute;width:15px;height:15px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.25);}
+.fm-switch input:checked + .fm-slider{background:#7c3aed;}
+.fm-switch input:checked + .fm-slider::before{transform:translateX(17px);}
+.fm-type-sel{padding:8px 11px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:12px;font-weight:600;color:#374151;font-family:'Inter',sans-serif;outline:none;background:#fff;cursor:pointer;}
+.fm-type-sel:focus{border-color:#7c3aed;}
+.fm-input{width:100%;padding:10px 13px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;font-family:'Inter',sans-serif;outline:none;transition:border .2s,box-shadow .2s;background:#fff;box-sizing:border-box;}
+.fm-input:focus{border-color:#7c3aed;box-shadow:0 0 0 3px rgba(124,58,237,.12);}
+.fm-input.err{border-color:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.12);}
+.fm-req-tag{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:#64748b;cursor:pointer;user-select:none;margin-left:auto;}
+.fm-req-tag input{accent-color:#7c3aed;width:14px;height:14px;cursor:pointer;}
+.fm-sec-title{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:700;color:#1e293b;margin-bottom:12px;}
+.fm-step-badge{width:23px;height:23px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;display:inline-grid;place-items:center;font-size:11px;font-weight:800;flex-shrink:0;}
+@media (max-width:640px){.fm-grid{grid-template-columns:1fr;}}
+
 .action-btn{padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:none;font-family:'Inter',sans-serif;transition:all .2s;}
 .action-btn.done{background:#dcfce7;color:#16a34a;}.action-btn.done:hover{background:#bbf7d0;}
 .action-btn.revise{background:#fffbeb;color:#d97706;}.action-btn.revise:hover{background:#fef3c7;}
@@ -1207,10 +1236,12 @@ button:disabled{opacity:.65;cursor:not-allowed !important;}
     </div>
 
     <!-- Saved forms list (pehle ye dikhta hai) -->
-    <div id="formsList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px"></div>
+    <div id="formsList" class="fm-grid"></div>
 
-    <div id="formsEmpty" class="empty" style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;display:none">
-      Abhi koi form nahi bana. "➕ New Form" se pehla form banao.
+    <div id="formsEmpty" style="display:none;background:#fff;border-radius:16px;border:1px dashed #c4b5fd;text-align:center;padding:48px 20px">
+      <div style="width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,#f5f3ff,#ede9fe);display:grid;place-items:center;font-size:30px;margin:0 auto 14px">📝</div>
+      <div style="font-size:15px;font-weight:800;color:#1e293b">Abhi koi form nahi bana</div>
+      <div style="font-size:12.5px;color:#64748b;margin-top:5px">"➕ New Form" dabao — sheet connect karo, fields chuno, ho gaya.</div>
     </div>
   </div>
 
@@ -1617,37 +1648,47 @@ button:disabled{opacity:.65;cursor:not-allowed !important;}
      FORM BUILDER MODAL (create + edit)
 ══════════════════════════════════════ -->
 <div class="modal-overlay" id="formBuilderModal">
-  <div class="modal" style="width:760px;max-width:96vw;max-height:90vh;overflow-y:auto">
-    <h3 id="formBuilderTitle" style="margin-bottom:16px">➕ New Form</h3>
+  <div class="modal" style="width:780px;max-width:96vw;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+      <div class="fm-ico" style="width:40px;height:40px;font-size:18px;border-radius:11px">📝</div>
+      <div>
+        <h3 id="formBuilderTitle" style="margin:0">New Form</h3>
+        <div style="font-size:11.5px;color:#64748b;margin-top:1px">Sheet connect karo → fields select karo → save</div>
+      </div>
+    </div>
     <div class="alert error" id="formBuilderErr"></div>
 
-    <!-- Sheet basics (FMS jaisa) -->
-    <div style="background:#f8fafc;border-radius:10px;padding:14px;margin-bottom:16px">
+    <!-- Step 1: Sheet connect -->
+    <div style="background:#f8fafc;border:1px solid #eef2f7;border-radius:14px;padding:16px;margin-bottom:16px">
+      <div class="fm-sec-title"><span class="fm-step-badge">1</span> Sheet Connect <span style="font-weight:400;font-size:11px;color:#94a3b8">— jahan form ka data add hoga</span></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div class="form-group" style="margin:0">
-          <label>Form Name <span style="color:#94a3b8;font-weight:400;font-size:11px">(display name)</span></label>
-          <input type="text" id="fbFormName" placeholder="e.g. Daily Entry, Visitor Log"/>
+          <label>Form Name</label>
+          <input class="fm-input" type="text" id="fbFormName" placeholder="e.g. Daily Entry, Visitor Log"/>
         </div>
         <div class="form-group" style="margin:0">
-          <label>Google Sheet Tab Name <span style="color:#94a3b8;font-weight:400;font-size:11px">(jahan data add hoga)</span></label>
-          <input type="text" id="fbSheetName" placeholder="e.g. Sheet1, Entries"/>
+          <label>Sheet Tab Name</label>
+          <input class="fm-input" type="text" id="fbSheetName" placeholder="e.g. Sheet1, Entries"/>
         </div>
         <div class="form-group" style="margin:0">
-          <label>Google Sheet ID</label>
-          <input type="text" id="fbSheetId" placeholder="Sheet ID or full URL"/>
+          <label>Google Sheet ID / URL</label>
+          <input class="fm-input" type="text" id="fbSheetId" placeholder="Sheet ID ya poora URL paste karo"/>
         </div>
         <div class="form-group" style="margin:0">
           <label>Header Row</label>
-          <input type="number" id="fbHeaderRow" value="1" min="1"/>
+          <input class="fm-input" type="number" id="fbHeaderRow" value="1" min="1"/>
         </div>
       </div>
-      <button class="btn btn-outline btn-sm" style="margin-top:12px;color:#7c3aed" onclick="fbFetchHeaders()" id="fbFetchBtn">🔄 Fetch Headers</button>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:13px;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" onclick="fbFetchHeaders()" id="fbFetchBtn">🔄 Fetch Headers</button>
+        <span id="fbFetchOk" style="display:none;font-size:12px;font-weight:600;color:#16a34a"></span>
+      </div>
     </div>
 
-    <!-- Fields config -->
+    <!-- Step 2: Fields -->
     <div id="fbFieldsSection" style="display:none">
-      <div style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">
-        Form Fields <span style="font-weight:400;text-transform:none">— jo column form me chahiye use ✓ karo; Dropdown select karke options de sakte ho</span>
+      <div class="fm-sec-title"><span class="fm-step-badge">2</span> Form Fields
+        <span style="font-weight:400;font-size:11px;color:#94a3b8">— toggle ON = form me dikhega · type badlo · Dropdown par options do</span>
       </div>
       <div id="fbFieldsContainer" style="display:flex;flex-direction:column;gap:8px"></div>
     </div>
@@ -1663,14 +1704,21 @@ button:disabled{opacity:.65;cursor:not-allowed !important;}
      FORM FILL MODAL
 ══════════════════════════════════════ -->
 <div class="modal-overlay" id="formFillModal">
-  <div class="modal" style="width:560px;max-width:96vw;max-height:90vh;overflow-y:auto">
-    <h3 id="formFillTitle" style="margin-bottom:4px">📝 Form</h3>
-    <div id="formFillSub" style="font-size:12px;color:#64748b;margin-bottom:16px"></div>
-    <div class="alert error" id="formFillErr"></div>
-    <div id="formFillFields" style="display:flex;flex-direction:column;gap:12px"></div>
-    <div class="modal-footer" style="justify-content:space-between;margin-top:20px">
-      <button class="btn btn-outline" onclick="closeModal('formFillModal')">Cancel</button>
-      <button class="btn btn-primary" id="formFillSubmitBtn" onclick="submitFormFill()">✅ Submit</button>
+  <div class="modal" style="width:560px;max-width:96vw;max-height:92vh;overflow-y:auto;padding:0;overflow-x:hidden">
+    <div style="background:linear-gradient(135deg,#7c3aed,#a78bfa);padding:20px 24px;display:flex;align-items:center;gap:13px">
+      <div style="width:42px;height:42px;border-radius:12px;background:rgba(255,255,255,.2);display:grid;place-items:center;font-size:20px;flex-shrink:0">📝</div>
+      <div style="min-width:0">
+        <div id="formFillTitle" style="font-size:16px;font-weight:800;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Form</div>
+        <div id="formFillSub" style="font-size:11.5px;color:rgba(255,255,255,.85);margin-top:1px"></div>
+      </div>
+    </div>
+    <div style="padding:20px 24px 22px">
+      <div class="alert error" id="formFillErr"></div>
+      <div id="formFillFields" style="display:flex;flex-direction:column;gap:14px"></div>
+      <div class="modal-footer" style="justify-content:space-between;margin-top:22px">
+        <button class="btn btn-outline" onclick="closeModal('formFillModal')">Cancel</button>
+        <button class="btn btn-primary" id="formFillSubmitBtn" onclick="submitFormFill()">✅ Submit</button>
+      </div>
     </div>
   </div>
 </div>
@@ -5229,9 +5277,10 @@ let _fbEditId = null;    // null = new form, warna edit
 let _fillForm = null;    // jo form abhi fill ho raha hai
 
 const FB_TYPES = [
-  ['text','Text'], ['textarea','Long Text'], ['number','Number'],
-  ['date','Date'], ['time','Time'], ['dropdown','Dropdown ▾']
+  ['text','✏️ Text'], ['textarea','📃 Long Text'], ['number','🔢 Number'],
+  ['date','📅 Date'], ['time','⏰ Time'], ['dropdown','▾ Dropdown']
 ];
+const FB_ICON = { text:'✏️', textarea:'📃', number:'🔢', date:'📅', time:'⏰', dropdown:'📋' };
 
 async function loadForms() {
   document.getElementById('formsNewBtn').style.display = ME.role==='admin' ? 'inline-flex' : 'none';
@@ -5244,24 +5293,34 @@ async function loadForms() {
 function renderFormsList() {
   const list = document.getElementById('formsList');
   const empty = document.getElementById('formsEmpty');
+  list.className = 'fm-grid';
   if (!_forms.length) { list.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display='none';
   const isAdmin = ME.role==='admin';
-  list.innerHTML = _forms.map(f => `
-    <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px">
-      <div style="display:flex;align-items:center;gap:10px">
-        <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#7c3aed,#a78bfa);display:grid;place-items:center;font-size:17px">📝</div>
-        <div style="min-width:0">
-          <div style="font-weight:700;color:#1e293b;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escH(f.form_name)}</div>
-          <div style="font-size:11px;color:#64748b">Tab: ${escH(f.sheet_name)} · ${(f.fields||[]).length} fields</div>
+  list.innerHTML = _forms.map(f => {
+    const flds = f.fields||[];
+    const dd = flds.filter(x=>x.type==='dropdown').length;
+    return `
+    <div class="fm-card">
+      <div style="display:flex;align-items:flex-start;gap:12px">
+        <div class="fm-ico">📝</div>
+        <div style="min-width:0;flex:1">
+          <div style="font-weight:800;color:#1e293b;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escH(f.form_name)}">${escH(f.form_name)}</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:2px">${escH(f.created_at ? String(f.created_at).split(' ')[0] : '')}</div>
         </div>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btn btn-primary btn-sm" style="flex:1" onclick="openFormFill(${f.id})">✍️ Fill</button>
-        ${isAdmin ? `<button class="btn btn-outline btn-sm" style="color:#7c3aed" onclick="openFormBuilder(${f.id})">✏️ Edit</button>
-        <button class="btn btn-outline btn-sm" style="color:#dc2626;border-color:#fecaca" onclick="deleteForm(${f.id})">🗑</button>` : ''}
+        <span class="fm-chip">📄 ${escH(f.sheet_name)}</span>
+        <span class="fm-chip">${flds.length} fields</span>
+        ${dd ? `<span class="fm-chip">▾ ${dd} dropdown</span>` : ''}
       </div>
-    </div>`).join('');
+      <div style="display:flex;gap:7px;margin-top:2px">
+        <button class="btn btn-primary btn-sm" style="flex:1" onclick="openFormFill(${f.id})">✍️ Fill Form</button>
+        ${isAdmin ? `<button class="btn btn-outline btn-sm" style="color:#7c3aed" onclick="openFormBuilder(${f.id})" title="Edit">✏️</button>
+        <button class="btn btn-outline btn-sm" style="color:#dc2626;border-color:#fecaca" onclick="deleteForm(${f.id})" title="Delete">🗑</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
 }
 
 // ── Builder ──
@@ -5269,14 +5328,15 @@ function openFormBuilder(id) {
   _fbEditId = id || null;
   _fbFields = [];
   document.getElementById('formBuilderErr').style.display='none';
-  document.getElementById('formBuilderTitle').textContent = id ? '✏️ Edit Form' : '➕ New Form';
+  document.getElementById('fbFetchOk').style.display='none';
+  document.getElementById('formBuilderTitle').textContent = id ? 'Edit Form' : 'New Form';
   const f = id ? _forms.find(x=>x.id===id) : null;
   document.getElementById('fbFormName').value  = f ? (f.form_name||'') : '';
   document.getElementById('fbSheetName').value = f ? (f.sheet_name||'') : '';
   document.getElementById('fbSheetId').value   = f ? (f.sheet_id||'') : '';
   document.getElementById('fbHeaderRow').value = f ? (f.header_row||1) : 1;
   if (f && (f.fields||[]).length) {
-    _fbFields = f.fields.map(x => ({ name:x.name, include:true, type:x.type||'text', options:(x.options||[]) }));
+    _fbFields = f.fields.map(x => ({ name:x.name, include:true, type:x.type||'text', options:(x.options||[]), required:!!x.required }));
   }
   renderFBFields();
   document.getElementById('formBuilderModal').classList.add('open');
@@ -5296,9 +5356,12 @@ async function fbFetchHeaders() {
   const old = {}; _fbFields.forEach(x => old[x.name.toLowerCase()] = x);
   _fbFields = (r.headers||[]).map(h => {
     const o = old[String(h.name).toLowerCase()];
-    return o ? o : { name:h.name, include:true, type:'text', options:[] };
+    return o ? o : { name:h.name, include:true, type:'text', options:[], required:false };
   });
   if (!_fbFields.length) return fbErr('Is tab me headers nahi mile — Header Row check karo');
+  const ok = document.getElementById('fbFetchOk');
+  ok.textContent = `✓ ${_fbFields.length} columns mil gaye`;
+  ok.style.display = 'inline';
   renderFBFields();
 }
 
@@ -5308,23 +5371,43 @@ function renderFBFields() {
   if (!_fbFields.length) { sec.style.display='none'; box.innerHTML=''; return; }
   sec.style.display='block';
   box.innerHTML = _fbFields.map((fld,i) => `
-    <div style="display:flex;align-items:center;gap:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;flex-wrap:wrap">
-      <input type="checkbox" ${fld.include?'checked':''} onchange="_fbFields[${i}].include=this.checked" style="width:16px;height:16px;accent-color:#7c3aed;cursor:pointer"/>
-      <div style="flex:1;min-width:120px;font-size:13px;font-weight:600;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escH(fld.name)}">${escH(fld.name)}</div>
-      <select onchange="fbTypeChange(${i},this.value)" style="padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;font-family:'Inter',sans-serif;outline:none;background:#fff">
-        ${FB_TYPES.map(([v,l])=>`<option value="${v}" ${fld.type===v?'selected':''}>${l}</option>`).join('')}
-      </select>
-      <input type="text" id="fbOpts${i}" value="${escH((fld.options||[]).join(', '))}"
-        placeholder="Options comma se: Yes, No, Maybe"
+    <div class="fm-field-row ${fld.include?'':'off'}" id="fbRow${i}">
+      <div class="fm-field-top">
+        <label class="fm-switch" title="Form me include karo">
+          <input type="checkbox" ${fld.include?'checked':''} onchange="fbToggleInclude(${i},this.checked)"/>
+          <span class="fm-slider"></span>
+        </label>
+        <div style="flex:1;min-width:110px;font-size:13px;font-weight:700;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escH(fld.name)}">${escH(fld.name)}</div>
+        <select class="fm-type-sel" onchange="fbTypeChange(${i},this.value)" ${fld.include?'':'disabled'}>
+          ${FB_TYPES.map(([v,l])=>`<option value="${v}" ${fld.type===v?'selected':''}>${l}</option>`).join('')}
+        </select>
+        <label class="fm-req-tag" title="Bina bhare submit nahi hoga">
+          <input type="checkbox" ${fld.required?'checked':''} onchange="_fbFields[${i}].required=this.checked" ${fld.include?'':'disabled'}/> Required
+        </label>
+      </div>
+      <input class="fm-input" type="text" id="fbOpts${i}" value="${escH((fld.options||[]).join(', '))}"
+        placeholder="▾ Dropdown options — comma se alag karo: Yes, No, Maybe"
         onchange="_fbFields[${i}].options=this.value.split(',').map(s=>s.trim()).filter(Boolean)"
-        style="flex:2;min-width:160px;padding:7px 10px;border:1.5px solid #ddd6fe;border-radius:8px;font-size:12px;font-family:'Inter',sans-serif;outline:none;${fld.type==='dropdown'?'':'display:none'}"/>
+        style="border-color:#ddd6fe;background:#faf5ff;font-size:12px;padding:8px 12px;${fld.type==='dropdown'&&fld.include?'':'display:none'}"/>
     </div>`).join('');
+}
+
+function fbToggleInclude(i,on) {
+  _fbFields[i].include = on;
+  const row = document.getElementById('fbRow'+i);
+  if (!row) return;
+  row.classList.toggle('off', !on);
+  row.querySelector('.fm-type-sel').disabled = !on;
+  row.querySelector('.fm-req-tag input').disabled = !on;
+  const opts = document.getElementById('fbOpts'+i);
+  if (opts) opts.style.display = (on && _fbFields[i].type==='dropdown') ? '' : 'none';
 }
 
 function fbTypeChange(i,val) {
   _fbFields[i].type = val;
   const opts = document.getElementById('fbOpts'+i);
-  if (opts) opts.style.display = val==='dropdown' ? '' : 'none';
+  if (opts) opts.style.display = (val==='dropdown' && _fbFields[i].include) ? '' : 'none';
+  if (val==='dropdown' && opts) opts.focus();
 }
 
 function fbErr(msg) {
@@ -5340,7 +5423,7 @@ async function saveFormBuilder() {
   const headerRow = parseInt(document.getElementById('fbHeaderRow').value)||1;
   if (!sheetName || !sheetId) return fbErr('Sheet ID aur Tab Name required hain');
   const fields = _fbFields.filter(f=>f.include).map(f => ({
-    name:f.name, type:f.type, options: f.type==='dropdown' ? (f.options||[]) : []
+    name:f.name, type:f.type, options: f.type==='dropdown' ? (f.options||[]) : [], required: !!f.required
   }));
   if (!fields.length) return fbErr('Kam se kam ek field select karo (pehle Fetch Headers karo)');
   const body = { formName: formName||sheetName, sheetName, sheetId, headerRow, fields };
@@ -5367,23 +5450,28 @@ function openFormFill(id) {
   _fillForm = _forms.find(x=>x.id===id);
   if (!_fillForm) return;
   document.getElementById('formFillErr').style.display='none';
-  document.getElementById('formFillTitle').textContent = '📝 ' + _fillForm.form_name;
-  document.getElementById('formFillSub').textContent = 'Data is sheet tab me add hoga: ' + _fillForm.sheet_name;
+  document.getElementById('formFillTitle').textContent = _fillForm.form_name;
+  document.getElementById('formFillSub').textContent = '📄 ' + _fillForm.sheet_name + ' me entry add hogi';
   const box = document.getElementById('formFillFields');
   box.innerHTML = (_fillForm.fields||[]).map((fld,i) => {
-    const base = 'width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:\'Inter\',sans-serif;outline:none';
     let input = '';
     if (fld.type==='dropdown') {
-      input = `<select id="ff${i}" style="${base};background:#fff">
-        <option value="">— Select —</option>
+      input = `<select id="ff${i}" class="fm-input" style="cursor:pointer">
+        <option value="">— Select karo —</option>
         ${(fld.options||[]).map(o=>`<option value="${escH(o)}">${escH(o)}</option>`).join('')}
       </select>`;
     } else if (fld.type==='textarea') {
-      input = `<textarea id="ff${i}" rows="3" style="${base};resize:vertical"></textarea>`;
+      input = `<textarea id="ff${i}" class="fm-input" rows="3" style="resize:vertical" placeholder="${escH(fld.name)} likho…"></textarea>`;
     } else {
-      input = `<input type="${fld.type==='number'?'number':fld.type==='date'?'date':fld.type==='time'?'time':'text'}" id="ff${i}" style="${base}"/>`;
+      const t = fld.type==='number'?'number':fld.type==='date'?'date':fld.type==='time'?'time':'text';
+      input = `<input type="${t}" id="ff${i}" class="fm-input" ${t==='text'?`placeholder="${escH(fld.name)} likho…"`:''}/>`;
     }
-    return `<div class="form-group" style="margin:0"><label>${escH(fld.name)}</label>${input}</div>`;
+    return `<div>
+      <div class="fm-lbl" style="font-size:12px;font-weight:700;color:#374151;margin-bottom:6px;display:flex;align-items:center;gap:6px">
+        <span>${FB_ICON[fld.type]||'✏️'}</span> ${escH(fld.name)} ${fld.required?'<span style="color:#ef4444">*</span>':''}
+      </div>
+      ${input}
+    </div>`;
   }).join('');
   document.getElementById('formFillModal').classList.add('open');
 }
@@ -5391,10 +5479,20 @@ function openFormFill(id) {
 async function submitFormFill() {
   if (!_fillForm) return;
   const values = {};
+  let missing = false;
   (_fillForm.fields||[]).forEach((fld,i) => {
     const el = document.getElementById('ff'+i);
-    if (el) values[fld.name] = el.value;
+    if (!el) return;
+    el.classList.remove('err');
+    if (fld.required && !el.value.trim()) { el.classList.add('err'); missing = true; }
+    values[fld.name] = el.value;
   });
+  if (missing) {
+    const el = document.getElementById('formFillErr');
+    el.textContent = '⚠️ Red wale required fields bharo'; el.style.display='block';
+    return;
+  }
+  document.getElementById('formFillErr').style.display='none';
   const btn = document.getElementById('formFillSubmitBtn');
   btn.disabled = true; btn.textContent = '⏳ Submitting…';
   const r = await api('/api/forms/'+_fillForm.id+'/submit','POST',{ values });
