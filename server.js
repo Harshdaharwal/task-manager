@@ -3064,6 +3064,124 @@ app.post('/api/forms/:id/submit', requireAuth, async (req, res) => {
   }
 });
 
+// ══════════════════════════════════════════════════════
+// AI ASSISTANT — natural-language search over workspace data
+// ══════════════════════════════════════════════════════
+app.post('/api/assistant', requireAuth, async (req, res) => {
+  try {
+    const q = String((req.body && req.body.query) || '').trim();
+    if (!q) return res.json({ text: 'Ask me anything — try "pending tasks", "overdue", "summary", or a person\'s name.', items: [] });
+    const ql = q.toLowerCase();
+    const d = await getDB();
+    const role = req.session.role;
+    const isMgr = role === 'admin' || role === 'hod' || role === 'pc';
+    const meId = String(req.session.userId);
+    const t = today();
+
+    const safe = p => p.catch(() => []);
+    const [users, del, chk, leaves, slips, formsRows] = await Promise.all([
+      safe(d.findAll('Users')), safe(d.findAll('Delegation_Tasks')), safe(d.findAll('Checklist_Tasks')),
+      safe(d.findAll('Leaves')), safe(d.findAll('Help_Slips')), safe(d.findAll('Forms_Config'))
+    ]);
+    const uname = id => (users.find(u => String(u.id) === String(id)) || {}).name || '—';
+
+    let tasks = [
+      ...del.map(x => ({ ...x, _type: 'Delegation' })),
+      ...chk.map(x => ({ ...x, _type: 'Checklist' }))
+    ];
+    if (!isMgr) tasks = tasks.filter(x => String(x.assigned_to) === meId);
+
+    // Person detection (managers can query anyone)
+    let person = null;
+    if (isMgr) {
+      person = users.find(u => {
+        const n = (u.name || '').toLowerCase().trim();
+        return n && (ql.includes(n) || n.split(/\s+/).some(w => w.length > 2 && ql.includes(w)));
+      }) || null;
+    }
+    let scope = person ? tasks.filter(x => String(x.assigned_to) === String(person.id)) : tasks;
+
+    const has = (...words) => words.some(w => ql.includes(w));
+    const cap = arr => arr.slice(0, 15);
+    const byDue = (a, b) => (a.due_date || '').localeCompare(b.due_date || '');
+    const taskItem = x => ({
+      icon: x._type === 'Delegation' ? '📌' : '☑️',
+      title: x.description || '—',
+      sub: uname(x.assigned_to) + ' · due ' + (x.due_date || '—') + ' · ' + x._type,
+      tag: x.status === 'completed' ? 'Done' : (x.due_date && x.due_date < t ? 'Overdue' : (x.status || 'pending')),
+      tagColor: x.status === 'completed' ? 'green' : (x.due_date && x.due_date < t ? 'red' : 'amber')
+    });
+    const who = person ? person.name + "'s" : (isMgr ? 'Team' : 'Your');
+    const pendAll = scope.filter(x => x.status !== 'completed');
+    const odAll = pendAll.filter(x => x.due_date && x.due_date < t);
+
+    let text = '', items = [];
+
+    if (has('overdue', 'late', 'atka', 'atke')) {
+      text = odAll.length ? `🔥 ${who} overdue tasks: ${odAll.length}` : `🎉 No overdue tasks${person ? ' for ' + person.name : ''}!`;
+      items = cap([...odAll].sort(byDue)).map(taskItem);
+    } else if (has('today', 'aaj')) {
+      const list = pendAll.filter(x => x.due_date === t);
+      text = list.length ? `📅 Due today: ${list.length}` : '🎉 Nothing due today!';
+      items = cap(list).map(taskItem);
+    } else if (has('pending', 'incomplete', 'baaki', 'baki', 'remaining')) {
+      text = pendAll.length ? `⏳ ${who} pending tasks: ${pendAll.length} (${odAll.length} overdue)` : `🎉 No pending tasks${person ? ' for ' + person.name : ''}!`;
+      items = cap([...pendAll].sort(byDue)).map(taskItem);
+    } else if (has('completed', 'complete', 'done', 'finish')) {
+      const list = scope.filter(x => x.status === 'completed');
+      text = `✅ ${who} completed tasks: ${list.length}`;
+      items = cap(list.reverse()).map(taskItem);
+    } else if (has('leave', 'chutti')) {
+      let list = isMgr ? leaves : leaves.filter(l => String(l.user_id) === meId);
+      if (person) list = list.filter(l => String(l.user_id) === String(person.id));
+      text = list.length ? `🌴 Leave requests: ${list.length} (${list.filter(l => (l.status || 'pending') === 'pending').length} pending approval)` : 'No leave requests found.';
+      items = cap(list.reverse()).map(l => ({
+        icon: '🌴', title: uname(l.user_id) + ' — ' + (l.leave_type || 'Leave'),
+        sub: (l.from_date || '') + ' → ' + (l.to_date || '') + (l.reason ? ' · ' + l.reason : ''),
+        tag: l.status || 'pending',
+        tagColor: l.status === 'approved' ? 'green' : l.status === 'rejected' ? 'red' : 'amber'
+      }));
+    } else if (has('form')) {
+      text = formsRows.length ? `📝 Forms: ${formsRows.length}` : 'No forms created yet.';
+      items = cap(formsRows).map(f => ({ icon: '📝', title: f.form_name || f.sheet_name, sub: 'Adds entries to sheet tab: ' + f.sheet_name, tag: 'Form', tagColor: 'purple' }));
+    } else if (has('help', 'slip', 'issue', 'problem')) {
+      let list = isMgr ? slips : slips.filter(s => String(s.user_id) === meId);
+      const open = list.filter(s => (s.status || 'open') === 'open');
+      text = list.length ? `🆘 Help slips: ${list.length} (${open.length} open)` : 'No help slips found.';
+      items = cap(list.reverse()).map(s => ({
+        icon: '🆘', title: uname(s.user_id) + ' — ' + (s.category || 'Other'),
+        sub: s.details || '', tag: s.status || 'open',
+        tagColor: (s.status || 'open') === 'open' ? 'amber' : 'green'
+      }));
+    } else if (isMgr && has('user', 'employee', 'team', 'member', 'staff', 'log')) {
+      text = `👥 Team members: ${users.length}`;
+      items = cap(users).map(u => ({ icon: '👤', title: u.name || '—', sub: (u.email || '') + (u.department ? ' · ' + u.department : ''), tag: u.role || 'user', tagColor: 'purple' }));
+    } else if (has('summary', 'report', 'status', 'overview', 'dashboard')) {
+      const done = scope.filter(x => x.status === 'completed').length;
+      text = `📊 ${who} summary: ${scope.length} tasks — ✅ ${done} done, ⏳ ${pendAll.length} pending, 🔥 ${odAll.length} overdue.` +
+        (isMgr && !person ? ` Team: ${users.length} members.` : '');
+      items = cap([...(odAll.length ? odAll : pendAll)].sort(byDue)).map(taskItem);
+    } else if (person) {
+      const done = scope.filter(x => x.status === 'completed').length;
+      text = `👤 ${person.name}: ${scope.length} tasks — ✅ ${done} done, ⏳ ${pendAll.length} pending, 🔥 ${odAll.length} overdue.`;
+      items = cap([...pendAll].sort(byDue)).map(taskItem);
+    } else {
+      // Free-text search across tasks, users, forms
+      const list = scope.filter(x => (x.description || '').toLowerCase().includes(ql));
+      const matchU = isMgr ? users.filter(u => (u.name || '').toLowerCase().includes(ql) || (u.email || '').toLowerCase().includes(ql)) : [];
+      const matchF = formsRows.filter(f => (f.form_name || '').toLowerCase().includes(ql));
+      items = [
+        ...matchU.map(u => ({ icon: '👤', title: u.name || '—', sub: (u.email || '') + (u.department ? ' · ' + u.department : ''), tag: u.role || 'user', tagColor: 'purple' })),
+        ...cap([...list].sort(byDue)).map(taskItem),
+        ...matchF.map(f => ({ icon: '📝', title: f.form_name || f.sheet_name, sub: 'Form · sheet tab: ' + f.sheet_name, tag: 'Form', tagColor: 'purple' }))
+      ];
+      text = items.length ? `🔍 Found ${items.length} result${items.length > 1 ? 's' : ''} for "${q}"` :
+        `😕 Nothing found for "${q}". Try "pending", "overdue", "summary", "leaves", or a person's name.`;
+    }
+    res.json({ text, items });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // GET /api/fms-tasks — list FMS configs (for task view dropdown)
 app.get('/api/fms-tasks', requireAuth, async (req, res) => {
   try {

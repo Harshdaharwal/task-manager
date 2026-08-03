@@ -305,6 +305,22 @@ tbody tr:last-child td{border-bottom:none;}
 .ow-filter:focus{border-color:#7c3aed;}
 @media (max-width:760px){#ownChartsRow{grid-template-columns:1fr !important;}}
 
+/* ══ AI ASSISTANT ══ */
+.ai-fab{position:fixed;right:22px;bottom:22px;width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;font-size:24px;display:grid;place-items:center;cursor:pointer;box-shadow:0 8px 24px rgba(124,58,237,.45);z-index:900;transition:transform .2s;border:none;}
+.ai-fab:hover{transform:scale(1.1);}
+@media (max-width:768px){.ai-fab{bottom:78px;}}
+.ai-panel{position:fixed;right:22px;bottom:86px;width:372px;max-width:calc(100vw - 32px);height:510px;max-height:calc(100vh - 130px);background:#fff;border-radius:18px;box-shadow:0 20px 60px rgba(15,23,42,.3);z-index:901;display:none;flex-direction:column;overflow:hidden;border:1px solid #e2e8f0;}
+.ai-panel.open{display:flex;}
+@media (max-width:768px){.ai-panel{bottom:140px;}}
+.ai-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;background:#f8fafc;}
+.ai-bub{max-width:88%;padding:10px 13px;border-radius:14px;font-size:12.5px;line-height:1.5;}
+.ai-bub.user{align-self:flex-end;background:#7c3aed;color:#fff;border-bottom-right-radius:4px;}
+.ai-bub.bot{align-self:flex-start;background:#fff;border:1px solid #e2e8f0;color:#1e293b;border-bottom-left-radius:4px;max-width:95%;}
+.ai-item{display:flex;gap:8px;align-items:flex-start;background:#faf5ff;border:1px solid #ede9fe;border-radius:10px;padding:8px 10px;margin-top:6px;font-size:12px;}
+.ai-chip{background:#fff;border:1px solid #ddd6fe;color:#6d28d9;border-radius:16px;padding:5px 11px;font-size:11.5px;font-weight:600;cursor:pointer;white-space:nowrap;}
+.ai-chip:hover{background:#f5f3ff;}
+.ai-tag{margin-left:auto;font-size:10px;font-weight:700;border-radius:10px;padding:2px 8px;flex-shrink:0;}
+
 .action-btn{padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:none;font-family:'Inter',sans-serif;transition:all .2s;}
 .action-btn.done{background:#dcfce7;color:#16a34a;}.action-btn.done:hover{background:#bbf7d0;}
 .action-btn.revise{background:#fffbeb;color:#d97706;}.action-btn.revise:hover{background:#fef3c7;}
@@ -1815,6 +1831,36 @@ button:disabled{opacity:.65;cursor:not-allowed !important;}
         <button class="btn btn-primary" id="formFillSubmitBtn" onclick="submitFormFill()">✅ Submit</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     AI ASSISTANT — floating chat
+══════════════════════════════════════ -->
+<button class="ai-fab" id="aiFab" onclick="aiToggle()" title="AI Assistant">🤖</button>
+<div class="ai-panel" id="aiPanel">
+  <div style="background:linear-gradient(135deg,#7c3aed,#a78bfa);padding:14px 16px;display:flex;align-items:center;gap:10px">
+    <div style="width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.2);display:grid;place-items:center;font-size:17px">🤖</div>
+    <div>
+      <div style="font-weight:800;color:#fff;font-size:14px">AI Assistant</div>
+      <div style="font-size:10.5px;color:rgba(255,255,255,.85)">Search anything — tasks, people, leaves…</div>
+    </div>
+    <button onclick="aiToggle()" style="margin-left:auto;background:rgba(255,255,255,.18);border:none;color:#fff;width:26px;height:26px;border-radius:8px;cursor:pointer;font-size:13px">✕</button>
+  </div>
+  <div class="ai-msgs" id="aiMsgs">
+    <div class="ai-bub bot">👋 Hi! Ask me anything about your workspace — type a person's name, a task keyword, or try a suggestion below.</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <span class="ai-chip" onclick="aiAsk('summary')">📊 Summary</span>
+      <span class="ai-chip" onclick="aiAsk('overdue tasks')">🔥 Overdue</span>
+      <span class="ai-chip" onclick="aiAsk('pending tasks')">⏳ Pending</span>
+      <span class="ai-chip" onclick="aiAsk('due today')">📅 Today</span>
+      <span class="ai-chip" onclick="aiAsk('leaves')">🌴 Leaves</span>
+      <span class="ai-chip" onclick="aiAsk('team members')">👥 Team</span>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;padding:11px;border-top:1px solid #e2e8f0;background:#fff">
+    <input id="aiInput" class="fm-input" placeholder="Type to search anything…" style="flex:1" onkeydown="if(event.key==='Enter')aiSend()"/>
+    <button class="btn btn-primary btn-sm" onclick="aiSend()" style="padding:9px 15px;font-size:14px">➤</button>
   </div>
 </div>
 
@@ -5382,6 +5428,41 @@ function exportRecords() {
   a.download = `Employee_Records_${start}.csv`;
   a.click();
   showToast('CSV exported!');
+}
+
+// ══════════════════════════════════════════════════════
+// AI ASSISTANT — chat search over workspace data
+// ══════════════════════════════════════════════════════
+function aiToggle() {
+  const p = document.getElementById('aiPanel');
+  p.classList.toggle('open');
+  if (p.classList.contains('open')) document.getElementById('aiInput').focus();
+}
+function aiAsk(q) { document.getElementById('aiInput').value = q; aiSend(); }
+const AI_TAGC = { green:['#f0fdf4','#16a34a'], red:['#fef2f2','#dc2626'], amber:['#fefce8','#a16207'], purple:['#f5f3ff','#6d28d9'] };
+
+async function aiSend() {
+  const inp = document.getElementById('aiInput');
+  const q = inp.value.trim();
+  if (!q) return;
+  inp.value = '';
+  const box = document.getElementById('aiMsgs');
+  box.insertAdjacentHTML('beforeend', `<div class="ai-bub user">${escH(q)}</div>`);
+  const tid = 'aib' + Date.now();
+  box.insertAdjacentHTML('beforeend', `<div class="ai-bub bot" id="${tid}">✨ Thinking…</div>`);
+  box.scrollTop = box.scrollHeight;
+  const r = await api('/api/assistant', 'POST', { query: q });
+  const el = document.getElementById(tid);
+  if (!el) return;
+  if (!r || r.error) { el.textContent = '⚠️ ' + (r?.error || 'Something went wrong — try again'); return; }
+  el.innerHTML = escH(r.text) + (r.items || []).map(it => {
+    const c = AI_TAGC[it.tagColor] || AI_TAGC.purple;
+    return `<div class="ai-item"><span style="flex-shrink:0">${it.icon || '🔹'}</span>
+      <div style="min-width:0;flex:1"><div style="font-weight:700;color:#1e293b;font-size:12px">${escH(it.title)}</div>
+      <div style="color:#64748b;font-size:11px;margin-top:1px">${escH(it.sub || '')}</div></div>
+      ${it.tag ? `<span class="ai-tag" style="background:${c[0]};color:${c[1]}">${escH(it.tag)}</span>` : ''}</div>`;
+  }).join('');
+  box.scrollTop = box.scrollHeight;
 }
 
 // ══════════════════════════════════════════════════════
