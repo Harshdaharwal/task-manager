@@ -3146,8 +3146,9 @@ async function aiCallGemini(context, msgs) {
     role: m.role === 'assistant' ? 'model' : 'user',
     parts: [{ text: m.content }]
   }));
+  const model = process.env.GEMINI_MODEL || 'gemini-flash-latest';
   const r = await fetch(
-    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + process.env.GEMINI_API_KEY,
+    'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + process.env.GEMINI_API_KEY,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
