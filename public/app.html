@@ -2338,11 +2338,14 @@ async function init() {
 
     if (ME.role === 'admin') {
       document.getElementById('nav-users').style.display = 'flex';
-      // MIS / FMS nav abhi ke liye hidden (client request) — wapas chahiye to 'flex' kar do
+      document.getElementById('nav-fms').style.display = 'flex'; // FMS Admin (admin only)
       document.getElementById('bulkDeleteBtn').style.display = 'inline-flex';
       // Mobile nav
       document.getElementById('mob-users').style.display = 'flex';
     }
+    // FMS Tasks — sab users ko dikhta hai
+    document.getElementById('nav-fms-tasks').style.display = 'flex';
+    document.getElementById('mob-fms-tasks').style.display = 'flex';
     if (ME.role === 'hod') {
       document.getElementById('setPlanBtn').style.display = 'inline-flex';
     }
