@@ -301,6 +301,9 @@ tbody tr:last-child td{border-bottom:none;}
 .ow-tbl td{padding:9px 10px;border-bottom:1px solid #f1f5f9;color:#334155;}
 .ow-pill{display:inline-block;padding:2px 9px;border-radius:12px;font-size:10.5px;font-weight:700;white-space:nowrap;}
 .ow-scroll{overflow-x:auto;}
+.ow-filter{padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:12.5px;font-weight:600;font-family:'Inter',sans-serif;outline:none;background:#fff;cursor:pointer;max-width:170px;}
+.ow-filter:focus{border-color:#7c3aed;}
+@media (max-width:760px){#ownChartsRow{grid-template-columns:1fr !important;}}
 
 .action-btn{padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:none;font-family:'Inter',sans-serif;transition:all .2s;}
 .action-btn.done{background:#dcfce7;color:#16a34a;}.action-btn.done:hover{background:#bbf7d0;}
@@ -996,7 +999,7 @@ button:disabled{opacity:.65;cursor:not-allowed !important;}
       <button class="btn btn-primary" onclick="openNewSlip()">+ New Help Slip</button>
     </div>
     <div class="task-table-card" style="padding:16px 18px">
-      <div style="font-size:13px;color:#64748b;margin-bottom:14px">Kisi bhi problem ke liye help slip raise karo — admin tak turant pahunchegi.</div>
+      <div style="font-size:13px;color:#64748b;margin-bottom:14px">Raise a help slip for any problem — it reaches the admin instantly.</div>
       <div class="tab-group" id="slipScopeTabs" style="display:inline-flex;margin-bottom:12px">
         <div class="tab active" id="slipTabMine" onclick="slipScope('mine',this)">👤 My Slips</div>
         <div class="tab" id="slipTabAll" style="display:none" onclick="slipScope('all',this)">📋 All Slips</div>
@@ -1258,17 +1261,25 @@ button:disabled{opacity:.65;cursor:not-allowed !important;}
   <div id="page-owner" class="page">
     <div class="page-header">
       <h2>👑 Owner Dashboard</h2>
-      <div style="display:flex;gap:8px;align-items:center">
-        <select id="ownRange" onchange="loadOwnerDash()" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:12.5px;font-weight:600;font-family:'Inter',sans-serif;outline:none;background:#fff;cursor:pointer">
-          <option value="7">± 7 din</option>
-          <option value="30" selected>± 30 din</option>
-          <option value="90">± 90 din</option>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="ownDoer" onchange="ownFilterChanged()" class="ow-filter">
+          <option value="">👤 All Doers</option>
+        </select>
+        <select id="ownType" onchange="ownFilterChanged()" class="ow-filter">
+          <option value="all">📋 All Types</option>
+          <option value="delegation">📌 Delegation</option>
+          <option value="checklist">☑️ Checklist</option>
+        </select>
+        <select id="ownRange" onchange="loadOwnerDash()" class="ow-filter">
+          <option value="7">± 7 days</option>
+          <option value="30" selected>± 30 days</option>
+          <option value="90">± 90 days</option>
         </select>
         <button class="btn btn-outline btn-sm" onclick="loadOwnerDash()">🔄 Refresh</button>
       </div>
     </div>
 
-    <div id="ownLoading" class="empty" style="background:#fff;border-radius:14px;border:1px solid #e2e8f0">⏳ Data load ho raha hai…</div>
+    <div id="ownLoading" class="empty" style="background:#fff;border-radius:14px;border:1px solid #e2e8f0">⏳ Loading data…</div>
 
     <div id="ownBody" style="display:none">
       <!-- Stat tiles -->
@@ -1280,18 +1291,34 @@ button:disabled{opacity:.65;cursor:not-allowed !important;}
         <div id="ownInsights" style="display:flex;flex-direction:column;gap:8px"></div>
       </div>
 
+      <!-- Charts -->
+      <div id="ownChartsRow" style="display:grid;grid-template-columns:1.6fr 1fr;gap:16px;margin-top:16px">
+        <div class="ow-card" style="margin-top:0">
+          <div class="ow-sec">📊 Team Workload <span style="font-weight:400;font-size:11px;color:#94a3b8">— completed vs pending vs overdue</span></div>
+          <div style="height:265px"><canvas id="ownChartBar"></canvas></div>
+        </div>
+        <div class="ow-card" style="margin-top:0">
+          <div class="ow-sec">🥧 Status Split</div>
+          <div style="height:265px"><canvas id="ownChartPie"></canvas></div>
+        </div>
+      </div>
+      <div class="ow-card">
+        <div class="ow-sec">📈 Task Timeline <span style="font-weight:400;font-size:11px;color:#94a3b8">— tasks by due date</span></div>
+        <div style="height:240px"><canvas id="ownChartLine"></canvas></div>
+      </div>
+
       <!-- Team performance -->
       <div class="ow-card">
-        <div class="ow-sec">👥 Team Performance <span style="font-weight:400;font-size:11px;color:#94a3b8">— kisi bhi row par click karke poori detail dekho</span></div>
+        <div class="ow-sec">👥 Team Performance <span style="font-weight:400;font-size:11px;color:#94a3b8">— click any row for full details</span></div>
         <div class="ow-scroll"><table class="ow-tbl" id="ownTeamTbl"></table></div>
-        <div id="ownTeamEmpty" class="empty" style="display:none">Is range me koi task data nahi hai.</div>
+        <div id="ownTeamEmpty" class="empty" style="display:none">No task data in this range.</div>
       </div>
 
       <!-- FMS overview -->
       <div class="ow-card">
-        <div class="ow-sec">🏭 FMS Overview <span style="font-weight:400;font-size:11px;color:#94a3b8">— step par click karke pending rows dekho</span></div>
+        <div class="ow-sec">🏭 FMS Overview <span style="font-weight:400;font-size:11px;color:#94a3b8">— click a step to see its pending rows</span></div>
         <div id="ownFmsWrap" style="display:flex;flex-direction:column;gap:12px"></div>
-        <div id="ownFmsEmpty" class="empty" style="display:none">Koi FMS pending nahi (ya FMS configure nahi hai).</div>
+        <div id="ownFmsEmpty" class="empty" style="display:none">No FMS pending (or no FMS configured).</div>
       </div>
     </div>
   </div>
@@ -1308,8 +1335,8 @@ button:disabled{opacity:.65;cursor:not-allowed !important;}
 
     <div id="formsEmpty" style="display:none;background:#fff;border-radius:16px;border:1px dashed #c4b5fd;text-align:center;padding:48px 20px">
       <div style="width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,#f5f3ff,#ede9fe);display:grid;place-items:center;font-size:30px;margin:0 auto 14px">📝</div>
-      <div style="font-size:15px;font-weight:800;color:#1e293b">Abhi koi form nahi bana</div>
-      <div style="font-size:12.5px;color:#64748b;margin-top:5px">"➕ New Form" dabao — sheet connect karo, fields chuno, ho gaya.</div>
+      <div style="font-size:15px;font-weight:800;color:#1e293b">No forms yet</div>
+      <div style="font-size:12.5px;color:#64748b;margin-top:5px">Click "➕ New Form" — connect a sheet, pick fields, done.</div>
     </div>
   </div>
 
@@ -1674,7 +1701,7 @@ button:disabled{opacity:.65;cursor:not-allowed !important;}
     <h3 style="margin-bottom:12px">Share Your Sheet</h3>
     <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:16px;margin-bottom:20px;">
       <p style="font-size:14px;color:#374151;line-height:1.6">
-        Apni FMS Sheet ko is email par share karo taaki data sync ho sake:
+        Share your FMS Sheet with this email so data can sync:
       </p>
       <div id="fmsShareEmail" style="margin-top:10px;font-size:15px;font-weight:700;color:#2563eb;background:#eff6ff;padding:10px;border-radius:8px;letter-spacing:.3px;word-break:break-all;">
       </div>
@@ -1721,14 +1748,14 @@ button:disabled{opacity:.65;cursor:not-allowed !important;}
       <div class="fm-ico" style="width:40px;height:40px;font-size:18px;border-radius:11px">📝</div>
       <div>
         <h3 id="formBuilderTitle" style="margin:0">New Form</h3>
-        <div style="font-size:11.5px;color:#64748b;margin-top:1px">Sheet connect karo → fields select karo → save</div>
+        <div style="font-size:11.5px;color:#64748b;margin-top:1px">Connect sheet → select fields → save</div>
       </div>
     </div>
     <div class="alert error" id="formBuilderErr"></div>
 
     <!-- Step 1: Sheet connect -->
     <div style="background:#f8fafc;border:1px solid #eef2f7;border-radius:14px;padding:16px;margin-bottom:16px">
-      <div class="fm-sec-title"><span class="fm-step-badge">1</span> Sheet Connect <span style="font-weight:400;font-size:11px;color:#94a3b8">— jahan form ka data add hoga</span></div>
+      <div class="fm-sec-title"><span class="fm-step-badge">1</span> Sheet Connect <span style="font-weight:400;font-size:11px;color:#94a3b8">— where form entries will be added</span></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div class="form-group" style="margin:0">
           <label>Form Name</label>
@@ -1740,7 +1767,7 @@ button:disabled{opacity:.65;cursor:not-allowed !important;}
         </div>
         <div class="form-group" style="margin:0">
           <label>Google Sheet ID / URL</label>
-          <input class="fm-input" type="text" id="fbSheetId" placeholder="Sheet ID ya poora URL paste karo"/>
+          <input class="fm-input" type="text" id="fbSheetId" placeholder="Paste Sheet ID or full URL"/>
         </div>
         <div class="form-group" style="margin:0">
           <label>Header Row</label>
@@ -1756,7 +1783,7 @@ button:disabled{opacity:.65;cursor:not-allowed !important;}
     <!-- Step 2: Fields -->
     <div id="fbFieldsSection" style="display:none">
       <div class="fm-sec-title"><span class="fm-step-badge">2</span> Form Fields
-        <span style="font-weight:400;font-size:11px;color:#94a3b8">— toggle ON = form me dikhega · type badlo · Dropdown par options do</span>
+        <span style="font-weight:400;font-size:11px;color:#94a3b8">— toggle ON = shown in form · change type · add options for Dropdown</span>
       </div>
       <div id="fbFieldsContainer" style="display:flex;flex-direction:column;gap:8px"></div>
     </div>
@@ -1819,11 +1846,11 @@ button:disabled{opacity:.65;cursor:not-allowed !important;}
     <div class="form-group">
       <label>New Due Date</label>
       <input type="date" id="reviseDate"/>
-      <div style="font-size:12px;color:#64748b;margin-top:4px">Aaj se pehle ki date select nahi kar sakte</div>
+      <div style="font-size:12px;color:#64748b;margin-top:4px">You cannot select a date before today</div>
     </div>
     <div class="form-group">
       <label>Reason for Revision</label>
-      <textarea id="reviseReason" placeholder="Revision ki wajah likho..." style="min-height:70px;width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;resize:vertical"></textarea>
+      <textarea id="reviseReason" placeholder="Reason for revision..." style="min-height:70px;width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;resize:vertical"></textarea>
     </div>
     <div class="modal-footer" style="justify-content:space-between">
       <button class="btn btn-outline" onclick="closeModal('reviseDateModal')">Cancel</button>
@@ -2000,7 +2027,7 @@ button:disabled{opacity:.65;cursor:not-allowed !important;}
         <option>Work From Home</option><option>Extra Working</option><option>Other</option>
       </select>
     </div>
-    <div class="form-group"><label>Reason</label><textarea id="leaveReason" placeholder="Reason likho…"></textarea></div>
+    <div class="form-group"><label>Reason</label><textarea id="leaveReason" placeholder="Enter reason…"></textarea></div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('leaveModal')">Cancel</button>
       <button class="btn btn-primary" id="leaveSubmitBtn" onclick="submitLeave()">✓ Submit Application</button>
@@ -2021,7 +2048,7 @@ button:disabled{opacity:.65;cursor:not-allowed !important;}
         <select id="slipUrgency"><option value="normal">Normal</option><option value="urgent">🔴 Urgent</option></select>
       </div>
     </div>
-    <div class="form-group"><label>Details</label><textarea id="slipDetails" placeholder="Problem detail me likho…"></textarea></div>
+    <div class="form-group"><label>Details</label><textarea id="slipDetails" placeholder="Describe the problem in detail…"></textarea></div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal('slipModal')">Cancel</button>
       <button class="btn btn-primary" id="slipSubmitBtn" onclick="submitSlip()">✓ Submit Slip</button>
@@ -2117,7 +2144,7 @@ button:disabled{opacity:.65;cursor:not-allowed !important;}
       <div id="bdTasksList" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;max-height:260px;overflow-y:auto;margin-bottom:14px"></div>
 
       <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:8px 12px;font-size:12px;color:#dc2626;margin-bottom:12px">
-        ⚠️ Delete permanent hai — wapas nahi aayega!
+        ⚠️ Delete is permanent — it cannot be undone!
       </div>
 
       <div style="display:flex;gap:8px;justify-content:flex-end">
@@ -2131,7 +2158,7 @@ button:disabled{opacity:.65;cursor:not-allowed !important;}
     <div id="bdYearSection" style="display:none;margin-top:18px;border-top:1.5px dashed #fecaca;padding-top:16px">
       <div style="font-size:13px;font-weight:700;color:#dc2626;margin-bottom:10px">🗓 Delete Checklist Tasks (Bulk)</div>
       <div style="font-size:11px;color:#64748b;margin-bottom:10px;line-height:1.5">
-        ℹ️ Pehle frequency category select karo (daily/weekly/monthly), fhir employee. Sirf <b>pending</b> aur <b>revised</b> tasks delete hongi — completed tasks safe rahengi.
+        ℹ️ First select a frequency category (daily/weekly/monthly), then the employee. Only <b>pending</b> and <b>revised</b> tasks will be deleted — completed tasks stay safe.
       </div>
       <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
         <div style="min-width:160px">
@@ -2206,7 +2233,7 @@ button:disabled{opacity:.65;cursor:not-allowed !important;}
       </div>
 
       <div style="background:#faf5ff;border:1px solid #c4b5fd;border-radius:8px;padding:8px 12px;font-size:12px;color:#6d28d9;margin-bottom:12px">
-        ℹ️ Approve hone ke baad task transfer hoga
+        ℹ️ Task will be transferred after approval
       </div>
 
       <div style="display:flex;gap:8px;justify-content:flex-end">
@@ -2334,7 +2361,7 @@ function renderDbmTable() {
   if (!filtered.length) {
     document.getElementById('dbmContent').innerHTML =
       `<div class="empty" style="padding:30px;text-align:center;color:#94a3b8">
-        ${_dbmStatusFilter === 'pending' ? 'Aapne abhi koi pending task delegate nahi kiya hai' : 'Aapne delegate kiye task me se koi completed nahi hai'}
+        ${_dbmStatusFilter === 'pending' ? 'You have not delegated any pending task yet' : 'None of your delegated tasks are completed yet'}
       </div>`;
     return;
   }
@@ -2554,8 +2581,8 @@ async function loadLeaves() {
   const isMgr = ME.role==='admin' || ME.role==='hod';
   document.getElementById('leaveTabTeam').style.display = isMgr ? '' : 'none';
   document.getElementById('leaveApproverNote').textContent = isMgr
-    ? 'Aap approver ho — Team Leaves tab me approve/reject karo.'
-    : 'Approval Admin/HOD karega.';
+    ? 'You are an approver — approve/reject in the Team Leaves tab.'
+    : 'Admin/HOD will approve.';
   const d = await api('/api/leaves?scope='+_leaveScope);
   _leaves = Array.isArray(d) ? d : [];
   if (d && d.error) showToast('⚠️ '+d.error,'error');
@@ -2615,14 +2642,14 @@ async function submitLeave(){
         err=document.getElementById('leaveErr'),
         btn=document.getElementById('leaveSubmitBtn');
   err.style.display='none';
-  if(!fromDate||!toDate){err.textContent='From aur To date dono bharo';err.style.display='block';return;}
-  if(toDate<fromDate){err.textContent='To date, From date se pehle nahi ho sakti';err.style.display='block';return;}
+  if(!fromDate||!toDate){err.textContent='Fill both From and To dates';err.style.display='block';return;}
+  if(toDate<fromDate){err.textContent='To date cannot be before From date';err.style.display='block';return;}
   btn.disabled=true;
   const d=await api('/api/leaves','POST',{fromDate,toDate,type,reason});
   btn.disabled=false;
   if(d.error){err.textContent=d.error;err.style.display='block';return;}
   closeModal('leaveModal');
-  showToast('✅ Leave application submit ho gayi!');
+  showToast('✅ Leave application submitted!');
   loadLeaves();
 }
 async function decideLeave(id,action){
@@ -2635,7 +2662,7 @@ async function cancelLeave(id){
   if(!confirm('Ye leave application cancel karni hai?'))return;
   const d=await api('/api/leaves/'+id,'DELETE');
   if(d.error){showToast('⚠️ '+d.error,'error');return;}
-  showToast('Leave cancel ho gayi');
+  showToast('Leave cancelled');
   loadLeaves();
 }
 
@@ -2706,7 +2733,7 @@ async function submitSlip(){
   btn.disabled=false;
   if(d.error){err.textContent=d.error;err.style.display='block';return;}
   closeModal('slipModal');
-  showToast('✅ Help slip submit ho gayi!');
+  showToast('✅ Help slip submitted!');
   loadHelpSlips();
 }
 function openResolveSlip(id){
@@ -2734,7 +2761,7 @@ async function deleteSlip(id){
   if(!confirm('Ye help slip delete karni hai?'))return;
   const d=await api('/api/help-slips/'+id,'DELETE');
   if(d.error){showToast('⚠️ '+d.error,'error');return;}
-  showToast('Slip delete ho gayi');
+  showToast('Slip deleted');
   loadHelpSlips();
 }
 
@@ -4363,7 +4390,7 @@ async function _apiFetch(url, method, body, _retries) {
     r = await fetch(url, opts);
   } catch(e) {
     console.error('API fetch failed:', url, e);
-    return { error: 'Network error — server se connect nahi ho saka' };
+    return { error: 'Network error — could not connect to server' };
   }
   if (r.status===401) {
     localStorage.removeItem('authToken');
@@ -4372,7 +4399,7 @@ async function _apiFetch(url, method, body, _retries) {
   }
   // 503 = server cold-starting, auto-retry up to 2 times with 3s delay
   if (r.status===503 && _retries>0) {
-    showToast('Server start ho raha hai, retry ho rahi hai...','warning');
+    showToast('Server is starting, retrying...','warning');
     await new Promise(res=>setTimeout(res,3000));
     return _apiFetch(url,method,body,_retries-1);
   }
@@ -4383,8 +4410,8 @@ async function _apiFetch(url, method, body, _retries) {
     return data;
   } catch(e) {
     console.error('API error:', url, r.status, e);
-    if (r.status === 503) return { error: 'Server abhi available nahi hai (503) — thodi der baad try karein' };
-    if (r.status === 502) return { error: 'Server se connection nahi mila (502) — check karein server chal raha hai' };
+    if (r.status === 503) return { error: 'Server not available right now (503) — try again shortly' };
+    if (r.status === 502) return { error: 'Could not reach the server (502) — check that it is running' };
     return { error: `HTTP ${r.status}` };
   }
 }
@@ -4634,7 +4661,7 @@ async function generateMIS() {
       populateMISDeptDropdown(misAllData);
       renderAllMIS(misAllData, []);
       if (fmsErrors.length) {
-        showToast(`⚠️ ${fmsErrors.length} FMS sheet abhi load nahi hui — dobara Generate karein`, 'error');
+        showToast(`⚠️ ${fmsErrors.length} FMS sheet(s) did not load — click Generate again`, 'error');
       }
 
       // ── Step 2: FMS Overview ko background me append karo ──
@@ -4643,13 +4670,13 @@ async function generateMIS() {
         const placeholder = document.createElement('div');
         placeholder.id = 'fmsOverviewLoading';
         placeholder.style.cssText = 'margin-top:18px;padding:14px;text-align:center;color:#64748b;font-size:12px;background:#fff;border:1px dashed #cbd5e1;border-radius:10px';
-        placeholder.innerHTML = '⏳ Loading FMS Overview… (Google Sheets se data aa raha hai)';
+        placeholder.innerHTML = '⏳ Loading FMS Overview… (fetching data from Google Sheets)';
         container.appendChild(placeholder);
 
         api(`/api/mis/fms?start=${start}&end=${end}`).then(fmsData => {
           const ph = document.getElementById('fmsOverviewLoading');
           if (fmsData && fmsData.error) {
-            if (ph) ph.innerHTML = `⚠️ FMS Overview load nahi ho saka: ${fmsData.error}`;
+            if (ph) ph.innerHTML = `⚠️ FMS Overview could not load: ${fmsData.error}`;
             return;
           }
           misFMSData = Array.isArray(fmsData) ? fmsData : [];
@@ -4657,7 +4684,7 @@ async function generateMIS() {
           renderAllMIS(misAllData, misFMSData);
         }).catch(e => {
           const ph = document.getElementById('fmsOverviewLoading');
-          if (ph) ph.innerHTML = `⚠️ FMS Overview load nahi ho saka: ${e.message || 'unknown error'}`;
+          if (ph) ph.innerHTML = `⚠️ FMS Overview could not load: ${e.message || 'unknown error'}`;
         });
       }
     } catch (e) {
@@ -5159,7 +5186,7 @@ function loadRecords() {
 async function generateRecords() {
   const start = document.getElementById('recStart').value;
   const end   = document.getElementById('recEnd').value;
-  if (!start || !end) { showToast('Week select karein', 'error'); return; }
+  if (!start || !end) { showToast('Select a week', 'error'); return; }
   const container = document.getElementById('recordsResults');
   container.innerHTML = `<div class="empty" style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;">⏳ Loading records…</div>`;
 
@@ -5185,7 +5212,7 @@ async function generateRecords() {
 function renderRecords(fmsErrors) {
   const container = document.getElementById('recordsResults');
   if (!recordsData.length) {
-    container.innerHTML = `<div class="empty" style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;">Is week ke liye koi record nahi mila.</div>`;
+    container.innerHTML = `<div class="empty" style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;">No records found for this week.</div>`;
     return;
   }
   const dept = (ME.role === 'admin') ? (document.getElementById('recDeptFilter').value || '') : '';
@@ -5196,13 +5223,13 @@ function renderRecords(fmsErrors) {
   if (q)    rows = rows.filter(r => r.name.toLowerCase().includes(q));
 
   if (!rows.length) {
-    container.innerHTML = `<div class="empty" style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;">Filter ke hisaab se koi employee nahi mila.</div>`;
+    container.innerHTML = `<div class="empty" style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;">No employees match the filter.</div>`;
     return;
   }
 
   const fmsWarn = (Array.isArray(fmsErrors) && fmsErrors.length)
     ? `<div style="background:#fffbeb;border:1px solid #fde68a;color:#b45309;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px">
-         ⚠️ Kuch FMS sheets abhi read nahi ho payi (${fmsErrors.join(', ')}). FMS counts thode kam ho sakte hain — refresh karke dobara try karein.
+         ⚠️ Some FMS sheets could not be read (${fmsErrors.join(', ')}). FMS counts may be lower — refresh and try again.
        </div>` : '';
 
   const tableRows = rows.map(r => {
@@ -5321,7 +5348,7 @@ async function openRecordDetail(userId) {
     </div>
 
     <div style="font-size:13px;font-weight:700;color:#1e293b;margin-top:16px">⏳ Pending Tasks (${r.pending})</div>
-    ${r.pending === 0 ? '<div class="empty" style="font-size:12px;margin-top:8px">🎉 Koi pending task nahi — sab complete!</div>' : ''}
+    ${r.pending === 0 ? '<div class="empty" style="font-size:12px;margin-top:8px">🎉 No pending tasks — all complete!</div>' : ''}
     ${section('📋 Delegation', '#1d4ed8', b.delegation.pending, delRows)}
     ${section('✅ Checklist', '#16a34a', b.checklist.pending, chlRows)}
     ${section('📊 FMS', '#6d28d9', b.fms.pending, fmsRows)}`;
@@ -5360,7 +5387,8 @@ function exportRecords() {
 // ══════════════════════════════════════════════════════
 // OWNER DASHBOARD — sab kuch ek jagah + AI insights + click popups
 // ══════════════════════════════════════════════════════
-let _own = { recs: [], fms: [], leaves: [], slips: [], users: [] };
+let _own = { recs: [], fms: [], leaves: [], slips: [], users: [], tasks: [] };
+let _ownCharts = {};
 
 function ownFmt(d){ return d.toISOString().split('T')[0]; }
 function ownToday(){ return ownFmt(new Date()); }
@@ -5371,42 +5399,57 @@ async function loadOwnerDash() {
   document.getElementById('ownBody').style.display = 'none';
   const s = new Date(); s.setDate(s.getDate()-days);
   const e = new Date(); e.setDate(e.getDate()+days);
-  const [rec, fms, leaves, slips, users] = await Promise.all([
+  const [rec, fms, leaves, slips, users, delg, chk] = await Promise.all([
     api(`/api/employee-records?start=${ownFmt(s)}&end=${ownFmt(e)}`),
     api('/api/fms-dashboard'),
     api('/api/leaves?scope=team'),
     api('/api/help-slips?scope=all'),
-    api('/api/users')
+    api('/api/users'),
+    api('/api/tasks?type=delegation'),
+    api('/api/tasks?type=checklist&includeFuture=1')
   ]);
   _own.recs   = (rec && rec.rows) ? rec.rows : [];
   _own.fms    = (fms && fms.rows) ? fms.rows : [];
   _own.leaves = Array.isArray(leaves) ? leaves : [];
   _own.slips  = Array.isArray(slips) ? slips : [];
   _own.users  = Array.isArray(users) ? users : [];
+  const flat = g => (g && g.grouped) ? g.grouped.flatMap(x=>x.tasks) : ((g && g.tasks) || []);
+  const sStr = ownFmt(s), eStr = ownFmt(e);
+  _own.tasks = [...flat(delg), ...flat(chk)].filter(t => t.due_date && t.due_date >= sStr && t.due_date <= eStr);
+  // Doer filter dropdown (keep current selection)
+  const doerSel = document.getElementById('ownDoer');
+  const cur = doerSel.value;
+  const names = [...new Set(_own.tasks.map(t=>t.assignedToName).filter(Boolean))].sort();
+  doerSel.innerHTML = '<option value="">👤 All Doers</option>' +
+    names.map(n=>`<option value="${escH(n)}" ${n===cur?'selected':''}>${escH(n)}</option>`).join('');
   document.getElementById('ownLoading').style.display = 'none';
   document.getElementById('ownBody').style.display = 'block';
-  renderOwnTiles(); renderOwnInsights(); renderOwnTeam(); renderOwnFms();
+  ownRenderAll();
 }
 
-// ── Helpers: saare pending tasks flatten (employee-wise) ──
-function ownAllPending() {
-  const out = [];
-  _own.recs.forEach(r => {
-    (r.pendingTasks?.delegation||[]).forEach(t => out.push({ who:r.name, type:'Delegation', desc:t.description, due:t.due_date, status:t.status }));
-    (r.pendingTasks?.checklist||[]).forEach(t => out.push({ who:r.name, type:'Checklist', desc:t.description, due:t.due_date, status:t.status }));
-  });
-  return out.sort((a,b)=>(a.due||'').localeCompare(b.due||''));
+function ownFilterChanged(){ ownRenderAll(); }
+
+// Filtered task list (doer + type filters applied)
+function ownFT() {
+  const doer = document.getElementById('ownDoer').value;
+  const type = document.getElementById('ownType').value;
+  return _own.tasks.filter(t => (!doer || t.assignedToName===doer) && (type==='all' || t.type===type));
 }
+
+function ownRenderAll(){ renderOwnTiles(); renderOwnInsights(); renderOwnCharts(); renderOwnTeam(); renderOwnFms(); }
 
 function renderOwnTiles() {
   const t = ownToday();
-  const total   = _own.recs.reduce((s,r)=>s+r.total,0);
-  const done    = _own.recs.reduce((s,r)=>s+r.done,0);
-  const pending = _own.recs.reduce((s,r)=>s+r.pending,0);
-  const overdue = _own.recs.reduce((s,r)=>s+r.overdue,0);
-  const fmsPend = _own.fms.length;
-  const lvPend  = _own.leaves.filter(l=>l.status==='pending').length;
-  const slOpen  = _own.slips.filter(s2=>s2.status==='open').length;
+  const ft = ownFT();
+  const doer = document.getElementById('ownDoer').value;
+  const total   = ft.length;
+  const done    = ft.filter(x=>x.status==='completed').length;
+  const pendArr = ft.filter(x=>x.status!=='completed');
+  const pending = pendArr.length;
+  const overdue = pendArr.filter(x=>x.due_date && x.due_date<t).length;
+  const fmsPend = _own.fms.filter(r=>!doer || (r.doer||'').toLowerCase().includes(doer.toLowerCase())).length;
+  const lvPend  = _own.leaves.filter(l=>l.status==='pending' && (!doer || l.userName===doer)).length;
+  const slOpen  = _own.slips.filter(s2=>s2.status==='open' && (!doer || s2.userName===doer)).length;
   const tiles = [
     { emo:'👥', num:_own.users.length, lbl:'Team Members', fn:'ownPopTeamList()' },
     { emo:'📋', num:total,   lbl:'Total Tasks',  fn:'ownPopTaskSplit()' },
@@ -5425,6 +5468,63 @@ function renderOwnTiles() {
     </div>`).join('');
 }
 
+// ── Charts (Chart.js) ──
+function ownChart(id, cfg) {
+  if (_ownCharts[id]) _ownCharts[id].destroy();
+  _ownCharts[id] = new Chart(document.getElementById(id).getContext('2d'), cfg);
+}
+
+function renderOwnCharts() {
+  if (typeof Chart === 'undefined') return;
+  const t = ownToday();
+  const ft = ownFT();
+  const leg = { position:'bottom', labels:{ boxWidth:12, font:{size:11} } };
+
+  // 1. Bar — per-doer workload (top 12)
+  const by = {};
+  ft.forEach(x=>{
+    const k = x.assignedToName || '—';
+    by[k] = by[k] || { d:0, p:0, o:0 };
+    if (x.status==='completed') by[k].d++;
+    else if (x.due_date && x.due_date<t) by[k].o++;
+    else by[k].p++;
+  });
+  const ents = Object.entries(by).sort((a,b)=>(b[1].d+b[1].p+b[1].o)-(a[1].d+a[1].p+a[1].o)).slice(0,12);
+  ownChart('ownChartBar', { type:'bar',
+    data:{ labels:ents.map(e=>e[0]), datasets:[
+      { label:'Completed', data:ents.map(e=>e[1].d), backgroundColor:'#22c55e', stack:'s', borderRadius:4 },
+      { label:'Pending',   data:ents.map(e=>e[1].p), backgroundColor:'#f59e0b', stack:'s', borderRadius:4 },
+      { label:'Overdue',   data:ents.map(e=>e[1].o), backgroundColor:'#ef4444', stack:'s', borderRadius:4 }]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      scales:{ x:{ stacked:true, grid:{display:false}, ticks:{font:{size:10}} }, y:{ stacked:true, beginAtZero:true, ticks:{precision:0} } },
+      plugins:{ legend:leg } } });
+
+  // 2. Doughnut — status split
+  const od   = ft.filter(x=>x.status!=='completed' && x.due_date && x.due_date<t).length;
+  const rev  = ft.filter(x=>x.status==='revised' && !(x.due_date && x.due_date<t)).length;
+  const pend = ft.filter(x=>x.status==='pending' && !(x.due_date && x.due_date<t)).length;
+  const done = ft.filter(x=>x.status==='completed').length;
+  ownChart('ownChartPie', { type:'doughnut',
+    data:{ labels:['Completed','Pending','Overdue','Revised'],
+      datasets:[{ data:[done,pend,od,rev], backgroundColor:['#22c55e','#f59e0b','#ef4444','#8b5cf6'], borderWidth:2, borderColor:'#fff' }]},
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'62%', plugins:{ legend:leg } } });
+
+  // 3. Line — tasks by due date
+  const byDate = {};
+  ft.forEach(x=>{
+    byDate[x.due_date] = byDate[x.due_date] || { d:0, p:0 };
+    if (x.status==='completed') byDate[x.due_date].d++; else byDate[x.due_date].p++;
+  });
+  const dates = Object.keys(byDate).sort();
+  ownChart('ownChartLine', { type:'line',
+    data:{ labels:dates, datasets:[
+      { label:'Completed', data:dates.map(k=>byDate[k].d), borderColor:'#22c55e', backgroundColor:'rgba(34,197,94,.10)', fill:true, tension:.35, pointRadius:2.5, borderWidth:2 },
+      { label:'Pending',   data:dates.map(k=>byDate[k].p), borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,.10)', fill:true, tension:.35, pointRadius:2.5, borderWidth:2 }]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      scales:{ y:{ beginAtZero:true, ticks:{precision:0} }, x:{ ticks:{ maxTicksLimit:14, font:{size:10} } } },
+      plugins:{ legend:leg } } });
+}
+
 // ── AI Insights (rule-based auto analysis) ──
 function renderOwnInsights() {
   const ins = [];
@@ -5435,46 +5535,47 @@ function renderOwnInsights() {
 
   if (total) {
     const emo = rate>=80?'🟢':rate>=50?'🟡':'🔴';
-    ins.push({ i:emo, h:`Team ka overall completion rate <b>${rate}%</b> hai (${done}/${total} tasks done)${rate>=80?' — great going! 🎉':rate<50?' — dhyan dene ki zaroorat hai.':'.'}` });
+    ins.push({ i:emo, h:`Overall team completion rate is <b>${rate}%</b> (${done}/${total} tasks done)${rate>=80?' — great going! 🎉':rate<50?' — needs attention.':'.'}` });
   }
 
   const perf = _own.recs.filter(r=>r.total>=3).map(r=>({...r, rate: r.done/r.total}));
   if (perf.length) {
     const best = [...perf].sort((a,b)=>b.rate-a.rate)[0];
-    if (best && best.rate>=.5) ins.push({ i:'⭐', h:`<b>${escH(best.name)}</b> top performer hai — ${best.done}/${best.total} tasks complete (${Math.round(best.rate*100)}%).`, fn:()=>ownEmpPop(best.userId) });
+    if (best && best.rate>=.5) ins.push({ i:'⭐', h:`<b>${escH(best.name)}</b> is the top performer — ${best.done}/${best.total} tasks completed (${Math.round(best.rate*100)}%).`, fn:()=>ownEmpPop(best.userId) });
   }
 
   const worstOd = [..._own.recs].sort((a,b)=>b.overdue-a.overdue)[0];
-  if (worstOd && worstOd.overdue>0) ins.push({ i:'🔥', h:`<b>${escH(worstOd.name)}</b> par sabse zyada overdue tasks hain (<b>${worstOd.overdue}</b>) — click karke dekho kaunse.`, fn:()=>ownEmpPop(worstOd.userId) });
+  if (worstOd && worstOd.overdue>0) ins.push({ i:'🔥', h:`<b>${escH(worstOd.name)}</b> has the most overdue tasks (<b>${worstOd.overdue}</b>) — click to see which ones.`, fn:()=>ownEmpPop(worstOd.userId) });
 
-  const allPend = ownAllPending().filter(x=>x.due && x.due<t);
+  const allPend = _own.tasks.filter(x=>x.status!=='completed' && x.due_date && x.due_date<t)
+    .sort((a,b)=>(a.due_date||'').localeCompare(b.due_date||''));
   if (allPend.length) {
     const oldest = allPend[0];
-    const daysOld = Math.round((new Date(t)-new Date(oldest.due))/86400000);
-    ins.push({ i:'⏰', h:`Sabse purana overdue task <b>${daysOld} din</b> se atka hai — "${escH(String(oldest.desc||'').slice(0,60))}" (${escH(oldest.who)}).`, fn:()=>ownPopPending(true) });
+    const daysOld = Math.round((new Date(t)-new Date(oldest.due_date))/86400000);
+    ins.push({ i:'⏰', h:`Oldest overdue task is stuck for <b>${daysOld} day${daysOld>1?'s':''}</b> — "${escH(String(oldest.description||'').slice(0,60))}" (${escH(oldest.assignedToName)}).`, fn:()=>ownPopPending(true) });
   }
 
   if (_own.recs.length>=2) {
     const avg = total/_own.recs.length;
     const maxL = [..._own.recs].sort((a,b)=>b.total-a.total)[0];
-    if (avg>0 && maxL.total > avg*1.8) ins.push({ i:'⚖️', h:`Workload imbalance: <b>${escH(maxL.name)}</b> ke paas ${maxL.total} tasks hain — team average (${Math.round(avg)}) se kaafi zyada. Kuch transfer karna better rahega.`, fn:()=>ownEmpPop(maxL.userId) });
+    if (avg>0 && maxL.total > avg*1.8) ins.push({ i:'⚖️', h:`Workload imbalance: <b>${escH(maxL.name)}</b> has ${maxL.total} tasks — well above the team average (${Math.round(avg)}). Consider transferring some.`, fn:()=>ownEmpPop(maxL.userId) });
   }
 
   if (_own.fms.length) {
     const byStep = {};
     _own.fms.forEach(r=>{ const k=r.fmsName+' → '+r.stepName; byStep[k]=(byStep[k]||0)+1; });
     const [topStep,cnt] = Object.entries(byStep).sort((a,b)=>b[1]-a[1])[0];
-    ins.push({ i:'🚧', h:`FMS bottleneck: <b>${escH(topStep)}</b> par <b>${cnt}</b> kaam atke hain.`, fn:()=>ownPopFms() });
+    ins.push({ i:'🚧', h:`FMS bottleneck: <b>${cnt}</b> items are stuck at <b>${escH(topStep)}</b>.`, fn:()=>ownPopFms() });
     const late = _own.fms.filter(r=>r.isLate).length;
-    if (late) ins.push({ i:'🚨', h:`FMS me <b>${late}</b> kaam plan date se late chal rahe hain.`, fn:()=>ownPopFms() });
+    if (late) ins.push({ i:'🚨', h:`<b>${late}</b> FMS item${late>1?'s are':' is'} running late vs plan date.`, fn:()=>ownPopFms() });
   }
 
   const lvPend = _own.leaves.filter(l=>l.status==='pending').length;
-  if (lvPend) ins.push({ i:'🌴', h:`<b>${lvPend}</b> leave request${lvPend>1?'s':''} approval ka wait kar rahi hain.`, fn:()=>ownPopLeaves() });
+  if (lvPend) ins.push({ i:'🌴', h:`<b>${lvPend}</b> leave request${lvPend>1?'s are':' is'} waiting for approval.`, fn:()=>ownPopLeaves() });
   const slOpen = _own.slips.filter(s=>s.status==='open').length;
-  if (slOpen) ins.push({ i:'🆘', h:`<b>${slOpen}</b> help slip${slOpen>1?'s':''} abhi open hain — team ko help chahiye.`, fn:()=>ownPopSlips() });
+  if (slOpen) ins.push({ i:'🆘', h:`<b>${slOpen}</b> help slip${slOpen>1?'s are':' is'} still open — the team needs help.`, fn:()=>ownPopSlips() });
 
-  if (!ins.length) ins.push({ i:'✅', h:'Sab clear! Is range me koi task data ya urgent issue nahi mila.' });
+  if (!ins.length) ins.push({ i:'✅', h:'All clear! No task data or urgent issues in this range.' });
 
   window._ownInsFns = ins.map(x=>x.fn||null);
   document.getElementById('ownInsights').innerHTML = ins.map((x,i)=>`
@@ -5485,18 +5586,31 @@ function renderOwnInsights() {
 
 function renderOwnTeam() {
   const tbl = document.getElementById('ownTeamTbl');
-  const rows = [..._own.recs].sort((a,b)=>b.total-a.total);
+  const t = ownToday();
+  const ft = ownFT();
+  const type = document.getElementById('ownType').value;
+  const by = {};
+  ft.forEach(x=>{
+    const k = String(x.assigned_to);
+    by[k] = by[k] || { userId:x.assigned_to, name:x.assignedToName||'—', total:0, done:0, pending:0, overdue:0 };
+    const b = by[k]; b.total++;
+    if (x.status==='completed') b.done++;
+    else { b.pending++; if (x.due_date && x.due_date<t) b.overdue++; }
+  });
+  const rows = Object.values(by).sort((a,b)=>b.total-a.total);
   document.getElementById('ownTeamEmpty').style.display = rows.length?'none':'block';
   if (!rows.length) { tbl.innerHTML=''; return; }
   tbl.innerHTML = `
     <tr><th>Employee</th><th>Dept</th><th>Total</th><th>Done</th><th>Pending</th><th>Overdue</th><th style="min-width:90px">Progress</th><th>Score</th></tr>
     ` + rows.map(r => {
+      const u = _own.users.find(x=>parseInt(x.id)===r.userId);
+      const rec = type==='all' ? _own.recs.find(x=>x.userId===r.userId) : null;
       const pct = r.total? Math.round(r.done/r.total*100) : 0;
-      const sc = r.score===null?'—':r.score;
-      const scCol = r.score===null?'#94a3b8': r.score>=-10?'#16a34a': r.score>=-40?'#d97706':'#dc2626';
+      const sc = (rec && rec.score!==null && rec.score!==undefined) ? rec.score : '—';
+      const scCol = sc==='—' ? '#94a3b8' : sc>=-10?'#16a34a': sc>=-40?'#d97706':'#dc2626';
       return `<tr class="ow-tr" onclick="ownEmpPop(${r.userId})">
         <td style="font-weight:700;color:#1e293b">${escH(r.name)}</td>
-        <td style="color:#64748b">${escH(r.department||'—')}</td>
+        <td style="color:#64748b">${escH((u&&u.department)||'—')}</td>
         <td>${r.total}</td>
         <td style="color:#16a34a;font-weight:700">${r.done}</td>
         <td style="color:#d97706;font-weight:700">${r.pending}</td>
@@ -5509,10 +5623,12 @@ function renderOwnTeam() {
 
 function renderOwnFms() {
   const wrap = document.getElementById('ownFmsWrap');
-  document.getElementById('ownFmsEmpty').style.display = _own.fms.length?'none':'block';
-  if (!_own.fms.length) { wrap.innerHTML=''; return; }
+  const doer = document.getElementById('ownDoer').value;
+  const list = _own.fms.filter(r=>!doer || (r.doer||'').toLowerCase().includes(doer.toLowerCase()));
+  document.getElementById('ownFmsEmpty').style.display = list.length?'none':'block';
+  if (!list.length) { wrap.innerHTML=''; return; }
   const byFms = {};
-  _own.fms.forEach(r=>{ (byFms[r.fmsName]=byFms[r.fmsName]||[]).push(r); });
+  list.forEach(r=>{ (byFms[r.fmsName]=byFms[r.fmsName]||[]).push(r); });
   wrap.innerHTML = Object.entries(byFms).map(([name,rows]) => {
     const bySteps = {};
     rows.forEach(r=>{ (bySteps[r.stepName]=bySteps[r.stepName]||[]).push(r); });
@@ -5536,42 +5652,55 @@ function openOwnerPop(title, sub, html) {
   document.getElementById('ownerPopBody').innerHTML = html;
   document.getElementById('ownerModal').classList.add('open');
 }
-const ownNoData = '<div class="empty">Koi data nahi.</div>';
+const ownNoData = '<div class="empty">No data.</div>';
 
 function ownPopTeamList() {
   const html = _own.users.length ? `<div class="ow-scroll"><table class="ow-tbl">
     <tr><th>Name</th><th>Role</th><th>Dept</th><th>Email</th><th>Phone</th></tr>
     ${_own.users.map(u=>`<tr class="ow-tr" onclick="ownEmpPop(${parseInt(u.id)})"><td style="font-weight:700">${escH(u.name)}</td><td>${escH(u.role)}</td><td>${escH(u.department||'—')}</td><td style="color:#64748b">${escH(u.email)}</td><td>${escH(u.phone||'—')}</td></tr>`).join('')}
   </table></div>` : ownNoData;
-  openOwnerPop('👥 Team Members', _own.users.length+' log', html);
+  openOwnerPop('👥 Team Members', _own.users.length+' members', html);
 }
 
 function ownPopTaskSplit() {
-  const rows = [..._own.recs].sort((a,b)=>b.total-a.total);
+  const t = ownToday();
+  const ft = ownFT();
+  const by = {};
+  ft.forEach(x=>{
+    const k = String(x.assigned_to);
+    by[k] = by[k] || { userId:x.assigned_to, name:x.assignedToName||'—', dT:0,dD:0, cT:0,cD:0, total:0, done:0, pending:0 };
+    const b = by[k]; b.total++;
+    if (x.type==='delegation') { b.dT++; if(x.status==='completed') b.dD++; }
+    else { b.cT++; if(x.status==='completed') b.cD++; }
+    if (x.status==='completed') b.done++; else b.pending++;
+  });
+  const rows = Object.values(by).sort((a,b)=>b.total-a.total);
   const html = rows.length ? `<div class="ow-scroll"><table class="ow-tbl">
     <tr><th>Employee</th><th>Delegation</th><th>Checklist</th><th>Total</th><th>Done</th><th>Pending</th></tr>
     ${rows.map(r=>`<tr class="ow-tr" onclick="ownEmpPop(${r.userId})">
       <td style="font-weight:700">${escH(r.name)}</td>
-      <td>${r.breakdown.delegation.done}/${r.breakdown.delegation.total}</td>
-      <td>${r.breakdown.checklist.done}/${r.breakdown.checklist.total}</td>
+      <td>${r.dD}/${r.dT}</td>
+      <td>${r.cD}/${r.cT}</td>
       <td style="font-weight:700">${r.total}</td><td style="color:#16a34a">${r.done}</td><td style="color:#d97706">${r.pending}</td></tr>`).join('')}
   </table></div>` : ownNoData;
-  openOwnerPop('📋 Tasks — Delegation + Checklist', 'Employee-wise split (row par click karo)', html);
+  openOwnerPop('📋 Tasks — Delegation + Checklist', 'Employee-wise split (click a row)', html);
 }
 
 function ownPopPending(onlyOverdue) {
   const t = ownToday();
-  let list = ownAllPending();
-  if (onlyOverdue) list = list.filter(x=>x.due && x.due<t);
+  let list = ownFT().filter(x=>x.status!=='completed')
+    .sort((a,b)=>(a.due_date||'').localeCompare(b.due_date||''));
+  if (onlyOverdue) list = list.filter(x=>x.due_date && x.due_date<t);
   const html = list.length ? `<div class="ow-scroll"><table class="ow-tbl">
-    <tr><th>Task</th><th>Kiska</th><th>Type</th><th>Due</th></tr>
+    <tr><th>Task</th><th>Assigned To</th><th>Type</th><th>Due</th></tr>
     ${list.map(x=>{
-      const od = x.due && x.due<t;
-      return `<tr><td style="max-width:260px">${escH(x.desc||'—')}</td><td style="font-weight:700">${escH(x.who)}</td>
-      <td><span class="ow-pill" style="background:${x.type==='Delegation'?'#ede9fe':'#dbeafe'};color:${x.type==='Delegation'?'#6d28d9':'#1d4ed8'}">${x.type}</span></td>
-      <td style="color:${od?'#dc2626':'#334155'};font-weight:${od?'700':'400'}">${escH(x.due||'—')}${od?' 🔥':''}</td></tr>`;
+      const od = x.due_date && x.due_date<t;
+      const isD = x.type==='delegation';
+      return `<tr><td style="max-width:260px">${escH(x.description||'—')}</td><td style="font-weight:700">${escH(x.assignedToName||'—')}</td>
+      <td><span class="ow-pill" style="background:${isD?'#ede9fe':'#dbeafe'};color:${isD?'#6d28d9':'#1d4ed8'}">${isD?'Delegation':'Checklist'}</span></td>
+      <td style="color:${od?'#dc2626':'#334155'};font-weight:${od?'700':'400'}">${escH(x.due_date||'—')}${od?' 🔥':''}</td></tr>`;
     }).join('')}
-  </table></div>` : '<div class="empty">🎉 Kuch bhi '+(onlyOverdue?'overdue':'pending')+' nahi!</div>';
+  </table></div>` : '<div class="empty">🎉 Nothing '+(onlyOverdue?'overdue':'pending')+'!</div>';
   openOwnerPop(onlyOverdue?'🔥 Overdue Tasks':'⏳ Pending Tasks', list.length+' tasks', html);
 }
 
@@ -5614,7 +5743,7 @@ function ownEmpPop(userId) {
   const r = _own.recs.find(x=>x.userId===userId);
   const u = _own.users.find(x=>parseInt(x.id)===userId);
   const name = r?r.name:(u?u.name:'—');
-  if (!r) { openOwnerPop('👤 '+name, u?(u.department||''):'', '<div class="empty">Is range me iska koi task data nahi hai.</div>'); return; }
+  if (!r) { openOwnerPop('👤 '+name, u?(u.department||''):'', '<div class="empty">No task data for this person in the selected range.</div>'); return; }
   const t = ownToday();
   const pct = r.total?Math.round(r.done/r.total*100):0;
   const chips = `
@@ -5640,7 +5769,7 @@ function ownEmpPop(userId) {
     ${arr.map(x=>{const od=x.due_date&&x.due_date<t;return `<tr><td style="max-width:330px">${escH(x.description||'—')}</td><td style="color:${od?'#dc2626':'#334155'};font-weight:${od?'700':'400'}">${escH(x.due_date||'—')}${od?' 🔥':''}</td></tr>`;}).join('')}
     </table></div>` : '';
   const pend = mkList(r.pendingTasks?.delegation||[], '📌 Pending Delegation') + mkList(r.pendingTasks?.checklist||[], '☑️ Pending Checklist');
-  openOwnerPop('👤 '+name, (r.department||'')+' · click se poori detail', chips + (pend || '<div class="empty">🎉 Koi pending task nahi!</div>'));
+  openOwnerPop('👤 '+name, (r.department||''), chips + (pend || '<div class="empty">🎉 No pending tasks!</div>'));
 }
 
 // ══════════════════════════════════════════════════════
@@ -5721,21 +5850,21 @@ async function fbFetchHeaders() {
   const sheetId = document.getElementById('fbSheetId').value.trim();
   const sheetName = document.getElementById('fbSheetName').value.trim();
   const headerRow = parseInt(document.getElementById('fbHeaderRow').value)||1;
-  if (!sheetId || !sheetName) return fbErr('Sheet ID aur Tab Name dono bharo');
+  if (!sheetId || !sheetName) return fbErr('Enter both Sheet ID and Tab Name');
   const btn = document.getElementById('fbFetchBtn');
   btn.disabled = true; btn.textContent = '⏳ Fetching…';
   const r = await api('/api/fms/fetch-headers','POST',{ sheetId, sheetName, headerRow });
   btn.disabled = false; btn.textContent = '🔄 Fetch Headers';
-  if (!r || r.error) return fbErr(r?.error || 'Headers fetch nahi hue');
+  if (!r || r.error) return fbErr(r?.error || 'Could not fetch headers');
   // Purane config ke saath merge — pehle se set type/options mat udao
   const old = {}; _fbFields.forEach(x => old[x.name.toLowerCase()] = x);
   _fbFields = (r.headers||[]).map(h => {
     const o = old[String(h.name).toLowerCase()];
     return o ? o : { name:h.name, include:true, type:'text', options:[], required:false };
   });
-  if (!_fbFields.length) return fbErr('Is tab me headers nahi mile — Header Row check karo');
+  if (!_fbFields.length) return fbErr('No headers found in this tab — check the Header Row');
   const ok = document.getElementById('fbFetchOk');
-  ok.textContent = `✓ ${_fbFields.length} columns mil gaye`;
+  ok.textContent = `✓ ${_fbFields.length} columns found`;
   ok.style.display = 'inline';
   renderFBFields();
 }
@@ -5748,7 +5877,7 @@ function renderFBFields() {
   box.innerHTML = _fbFields.map((fld,i) => `
     <div class="fm-field-row ${fld.include?'':'off'}" id="fbRow${i}">
       <div class="fm-field-top">
-        <label class="fm-switch" title="Form me include karo">
+        <label class="fm-switch" title="Include in form">
           <input type="checkbox" ${fld.include?'checked':''} onchange="fbToggleInclude(${i},this.checked)"/>
           <span class="fm-slider"></span>
         </label>
@@ -5756,12 +5885,12 @@ function renderFBFields() {
         <select class="fm-type-sel" onchange="fbTypeChange(${i},this.value)" ${fld.include?'':'disabled'}>
           ${FB_TYPES.map(([v,l])=>`<option value="${v}" ${fld.type===v?'selected':''}>${l}</option>`).join('')}
         </select>
-        <label class="fm-req-tag" title="Bina bhare submit nahi hoga">
+        <label class="fm-req-tag" title="Cannot submit without filling this">
           <input type="checkbox" ${fld.required?'checked':''} onchange="_fbFields[${i}].required=this.checked" ${fld.include?'':'disabled'}/> Required
         </label>
       </div>
       <input class="fm-input" type="text" id="fbOpts${i}" value="${escH((fld.options||[]).join(', '))}"
-        placeholder="▾ Dropdown options — comma se alag karo: Yes, No, Maybe"
+        placeholder="▾ Dropdown options — separate with commas: Yes, No, Maybe"
         onchange="_fbFields[${i}].options=this.value.split(',').map(s=>s.trim()).filter(Boolean)"
         style="border-color:#ddd6fe;background:#faf5ff;font-size:12px;padding:8px 12px;${fld.type==='dropdown'&&fld.include?'':'display:none'}"/>
     </div>`).join('');
@@ -5800,7 +5929,7 @@ async function saveFormBuilder() {
   const fields = _fbFields.filter(f=>f.include).map(f => ({
     name:f.name, type:f.type, options: f.type==='dropdown' ? (f.options||[]) : [], required: !!f.required
   }));
-  if (!fields.length) return fbErr('Kam se kam ek field select karo (pehle Fetch Headers karo)');
+  if (!fields.length) return fbErr('Select at least one field (run Fetch Headers first)');
   const body = { formName: formName||sheetName, sheetName, sheetId, headerRow, fields };
   const r = _fbEditId
     ? await api('/api/forms/'+_fbEditId,'PUT',body)
@@ -5813,7 +5942,7 @@ async function saveFormBuilder() {
 
 async function deleteForm(id) {
   const f = _forms.find(x=>x.id===id);
-  if (!confirm(`"${f?f.form_name:'Form'}" delete karna hai? (Sheet ka data delete NAHI hoga)`)) return;
+  if (!confirm(`"${f?f.form_name:'Form'}" Delete this form? (Sheet data will NOT be deleted)`)) return;
   const r = await api('/api/forms/'+id,'DELETE');
   if (r && r.error) return showToast('⚠️ '+r.error,'error');
   showToast('🗑 Form deleted');
@@ -5826,20 +5955,20 @@ function openFormFill(id) {
   if (!_fillForm) return;
   document.getElementById('formFillErr').style.display='none';
   document.getElementById('formFillTitle').textContent = _fillForm.form_name;
-  document.getElementById('formFillSub').textContent = '📄 ' + _fillForm.sheet_name + ' me entry add hogi';
+  document.getElementById('formFillSub').textContent = '📄 ' + _fillForm.sheet_name + ' — entry will be added here';
   const box = document.getElementById('formFillFields');
   box.innerHTML = (_fillForm.fields||[]).map((fld,i) => {
     let input = '';
     if (fld.type==='dropdown') {
       input = `<select id="ff${i}" class="fm-input" style="cursor:pointer">
-        <option value="">— Select karo —</option>
+        <option value="">— Select —</option>
         ${(fld.options||[]).map(o=>`<option value="${escH(o)}">${escH(o)}</option>`).join('')}
       </select>`;
     } else if (fld.type==='textarea') {
-      input = `<textarea id="ff${i}" class="fm-input" rows="3" style="resize:vertical" placeholder="${escH(fld.name)} likho…"></textarea>`;
+      input = `<textarea id="ff${i}" class="fm-input" rows="3" style="resize:vertical" placeholder="Enter ${escH(fld.name)}…"></textarea>`;
     } else {
       const t = fld.type==='number'?'number':fld.type==='date'?'date':fld.type==='time'?'time':'text';
-      input = `<input type="${t}" id="ff${i}" class="fm-input" ${t==='text'?`placeholder="${escH(fld.name)} likho…"`:''}/>`;
+      input = `<input type="${t}" id="ff${i}" class="fm-input" ${t==='text'?`placeholder="Enter ${escH(fld.name)}…"`:''}/>`;
     }
     return `<div>
       <div class="fm-lbl" style="font-size:12px;font-weight:700;color:#374151;margin-bottom:6px;display:flex;align-items:center;gap:6px">
@@ -5864,7 +5993,7 @@ async function submitFormFill() {
   });
   if (missing) {
     const el = document.getElementById('formFillErr');
-    el.textContent = '⚠️ Red wale required fields bharo'; el.style.display='block';
+    el.textContent = '⚠️ Please fill the highlighted required fields'; el.style.display='block';
     return;
   }
   document.getElementById('formFillErr').style.display='none';
@@ -5878,7 +6007,7 @@ async function submitFormFill() {
     return;
   }
   closeModal('formFillModal');
-  showToast('✅ Entry sheet me add ho gayi!');
+  showToast('✅ Entry added to the sheet!');
 }
 
 // ══════════════════════════════════════════════════════
@@ -6019,7 +6148,7 @@ async function deleteFMSSheet(id) {
 
 // ── Edit FMS ──
 async function openEditFMS() {
-  if (!fmsActiveId) { showToast('Pehle koi FMS select karo', 'error'); return; }
+  if (!fmsActiveId) { showToast('Select an FMS first', 'error'); return; }
 
   // Open modal immediately with loading state
   document.getElementById('fmsEditModal').classList.add('open');
@@ -6692,7 +6821,7 @@ function toggleFMSDeleteMode() {
 
 function confirmFMSDelete() {
   const checked = [...document.querySelectorAll('.fms-del-check:checked')].map(c=>parseInt(c.dataset.idx));
-  if (!checked.length) { showToast('Koi step select nahi ki','error'); return; }
+  if (!checked.length) { showToast('No step selected','error'); return; }
   checked.sort((a,b)=>b-a).forEach(idx=>fmsSteps.splice(idx,1));
   fmsDeleteMode=false;
   const btn = document.getElementById('editFmsDeleteModeBtn');
@@ -6715,7 +6844,7 @@ function toggleFMSDupMode() {
 
 function confirmFMSDup() {
   const checked = [...document.querySelectorAll('.fms-dup-check:checked')].map(c=>parseInt(c.dataset.idx));
-  if (!checked.length) { showToast('Koi step select nahi ki','error'); return; }
+  if (!checked.length) { showToast('No step selected','error'); return; }
   // Deep copy selected steps and add at end
   checked.forEach(idx => {
     const orig = fmsSteps[idx];
@@ -6744,7 +6873,7 @@ function toggleFMSDeleteModeAdd() {
 
 function confirmFMSDeleteAdd() {
   const checked = [...document.querySelectorAll('.fms-del-check:checked')].map(c=>parseInt(c.dataset.idx));
-  if (!checked.length) { showToast('Koi step select nahi ki','error'); return; }
+  if (!checked.length) { showToast('No step selected','error'); return; }
   checked.sort((a,b)=>b-a).forEach(idx=>fmsSteps.splice(idx,1));
   fmsDeleteMode=false;
   const btn = document.getElementById('fmsAddDeleteModeBtn');
@@ -7211,7 +7340,7 @@ async function saveFMSDone() {
     // Table re-render (instant, no API call)
     if (remaining === 0) {
       document.getElementById('fmsTaskRowsContainer').innerHTML =
-        `<div style="padding:32px;text-align:center;color:#22c55e;font-size:16px;font-weight:600">🎉 Sab tasks complete ho gaye!</div>`;
+        `<div style="padding:32px;text-align:center;color:#22c55e;font-size:16px;font-weight:600">🎉 All tasks completed!</div>`;
     } else {
       filterFMSTaskRows(); // search filter bhi apply rehta hai
     }
@@ -7354,11 +7483,11 @@ async function _doBulkDelete(tasks) {
   // v16: extra safety — completed tasks ko bulk delete me never include
   tasks = tasks.filter(t => t.status !== 'completed');
   if (!tasks.length) {
-    document.getElementById('bulkDeleteErr').textContent = 'Koi pending task select nahi hui (completed tasks bulk delete me allow nahi hain)';
+    document.getElementById('bulkDeleteErr').textContent = 'No pending task selected (completed tasks are not allowed in bulk delete)';
     document.getElementById('bulkDeleteErr').style.display = 'block';
     return;
   }
-  if (!confirm(`${tasks.length} task(s) permanently delete karna chahte ho?`)) return;
+  if (!confirm(`${tasks.length} task(s) will be permanently deleted. Continue?`)) return;
 
   let deleted = 0, skipped = 0;
   for (const t of tasks) {
@@ -7403,11 +7532,11 @@ function onBdYearUserChange() {
 async function openDelete12MonthsConfirm() {
   const freqSel = document.getElementById('bdYearFreq');
   const freq = freqSel.value;
-  if (!freq) { alert('Pehle frequency category select karo (daily / weekly / monthly etc.)!'); freqSel.focus(); return; }
+  if (!freq) { alert('First select a frequency category (daily / weekly / monthly etc.)!'); freqSel.focus(); return; }
 
   const sel = document.getElementById('bdYearUser');
   const userId = sel.value;
-  if (!userId) { alert('Phir employee select karo!'); return; }
+  if (!userId) { alert('Now select an employee!'); return; }
 
   const userName = sel.options[sel.selectedIndex].text;
   const userEmail = sel.options[sel.selectedIndex]?.dataset?.email || '';
@@ -7419,7 +7548,7 @@ async function openDelete12MonthsConfirm() {
 
   const count = data.count || 0;
   if (count === 0) {
-    alert(`${userName} ke liye is category (${freqLabel}) me koi deletable checklist task nahi mili.\n\nNote: Completed tasks bulk delete me kabhi include nahi hote — wo safe hain.`);
+    alert(`No deletable checklist tasks found for ${userName} in this category (${freqLabel}).\n\nNote: Completed tasks are never included in bulk delete — they are safe.`);
     return;
   }
 
@@ -7429,9 +7558,9 @@ async function openDelete12MonthsConfirm() {
     `Email: ${userEmail}\n` +
     `Category: ${freqLabel}\n\n` +
     `Pending/Revised Tasks to Delete: ${count}\n` +
-    `(Completed tasks SAFE — wo delete nahi hongi)\n\n` +
-    `Ye ${count} tasks permanently delete ho jaayengi — wapas nahi aayengi!\n\n` +
-    `Proceed karna hai?`
+    `(Completed tasks are SAFE — they will not be deleted)\n\n` +
+    `These ${count} tasks will be permanently deleted — this cannot be undone!\n\n` +
+    `Proceed?`
   );
   if (!confirmed) return;
 
@@ -7550,8 +7679,8 @@ async function _doTransfer(tasks) {
   const err = document.getElementById('transferErr');
   err.style.display = 'none';
   const toUserId = document.getElementById('transferToUser').value;
-  if (!toUserId) { err.textContent='Pehle "Transfer To" user select karo'; err.style.display='block'; return; }
-  if (!tasks.length) { err.textContent='Koi task select nahi hui'; err.style.display='block'; return; }
+  if (!toUserId) { err.textContent='First select a "Transfer To" user'; err.style.display='block'; return; }
+  if (!tasks.length) { err.textContent='No task selected'; err.style.display='block'; return; }
   const r = await api('/api/transfers','POST',{
     tasks: tasks.map(t => ({ taskId: t.id, taskType: t.taskType })),
     toUserId: parseInt(toUserId)

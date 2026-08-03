@@ -2611,8 +2611,8 @@ app.get('/api/leaves', requireAuth, async (req, res) => {
 app.post('/api/leaves', requireAuth, async (req, res) => {
   try {
     const { fromDate, toDate, type, reason } = req.body;
-    if (!fromDate || !toDate || !type) return res.status(400).json({ error: 'From date, to date aur type required hain' });
-    if (String(toDate) < String(fromDate)) return res.status(400).json({ error: 'To date, from date se pehle nahi ho sakti' });
+    if (!fromDate || !toDate || !type) return res.status(400).json({ error: 'From date, To date and Type are required' });
+    if (String(toDate) < String(fromDate)) return res.status(400).json({ error: 'To date cannot be before From date' });
     const nowStr = new Date().toISOString().replace('T', ' ').split('.')[0];
     const row = await db.insert('Leaves', {
       user_id: String(req.session.userId), from_date: String(fromDate), to_date: String(toDate),
@@ -2629,7 +2629,7 @@ app.put('/api/leaves/:id/decide', requireAuth, requireAdminOrHod, async (req, re
     if (!['approved', 'rejected'].includes(action)) return res.status(400).json({ error: 'Invalid action' });
     const leave = await db.findOne('Leaves', { id: req.params.id });
     if (!leave) return res.status(404).json({ error: 'Leave not found' });
-    if ((leave.status || 'pending') !== 'pending') return res.status(400).json({ error: 'Leave pehle hi decide ho chuki hai' });
+    if ((leave.status || 'pending') !== 'pending') return res.status(400).json({ error: 'Leave has already been decided' });
     const nowStr = new Date().toISOString().replace('T', ' ').split('.')[0];
     await db.update('Leaves', req.params.id, {
       status: action, decided_by: String(req.session.userId), decided_at: nowStr
@@ -2645,7 +2645,7 @@ app.delete('/api/leaves/:id', requireAuth, async (req, res) => {
     const own = String(leave.user_id) === String(req.session.userId);
     if (!own && req.session.role !== 'admin') return res.status(403).json({ error: 'Not allowed' });
     if (own && req.session.role !== 'admin' && (leave.status || 'pending') !== 'pending')
-      return res.status(400).json({ error: 'Sirf pending leave cancel ho sakti hai' });
+      return res.status(400).json({ error: 'Only a pending leave can be cancelled' });
     await deleteRow('Leaves', req.params.id);
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -2677,7 +2677,7 @@ app.get('/api/help-slips', requireAuth, async (req, res) => {
 app.post('/api/help-slips', requireAuth, async (req, res) => {
   try {
     const { category, urgency, details } = req.body;
-    if (!details || !category) return res.status(400).json({ error: 'Category aur details required hain' });
+    if (!details || !category) return res.status(400).json({ error: 'Category and details are required' });
     const nowStr = new Date().toISOString().replace('T', ' ').split('.')[0];
     const row = await db.insert('Help_Slips', {
       user_id: String(req.session.userId), category: String(category),
@@ -2692,7 +2692,7 @@ app.put('/api/help-slips/:id/resolve', requireAuth, requireAdminOrHod, async (re
   try {
     const slip = await db.findOne('Help_Slips', { id: req.params.id });
     if (!slip) return res.status(404).json({ error: 'Not found' });
-    if ((slip.status || 'open') !== 'open') return res.status(400).json({ error: 'Slip pehle hi resolve ho chuki hai' });
+    if ((slip.status || 'open') !== 'open') return res.status(400).json({ error: 'Slip has already been resolved' });
     const nowStr = new Date().toISOString().replace('T', ' ').split('.')[0];
     await db.update('Help_Slips', req.params.id, {
       status: 'resolved', resolution: req.body.resolution || '',
@@ -2796,7 +2796,7 @@ app.post('/api/fms/fetch-headers', requireAuth, async (req, res) => {
   try {
     const { sheetId, sheetName, headerRow = 1 } = req.body;
     if (!sheetId || !sheetName)
-      return res.status(400).json({ error: 'sheetId aur sheetName dono required hain' });
+      return res.status(400).json({ error: 'Both sheetId and sheetName are required' });
 
     const spreadsheetId = extractSheetId(sheetId);
     const d = await getDB();
@@ -2809,17 +2809,17 @@ app.post('/api/fms/fetch-headers', requireAuth, async (req, res) => {
 
     const rawHeaders = (response.data.values && response.data.values[0]) ? response.data.values[0] : [];
     if (!rawHeaders.length)
-      return res.json({ headers: [], error: 'No headers found — sheet tab name ya row number check karo' });
+      return res.json({ headers: [], error: 'No headers found — check the sheet tab name or row number' });
 
     res.json({ headers: headersToObjects(rawHeaders) });
   } catch(err) {
     let msg = err.message || 'Unknown error';
     if (msg.includes('403') || msg.toLowerCase().includes('forbidden'))
-      msg = 'Access denied (403) — sheet ko service account email ke saath Editor access de kar share karo';
+      msg = 'Access denied (403) — share the sheet with the service account email as Editor';
     else if (msg.includes('404') || msg.toLowerCase().includes('not found'))
-      msg = 'Sheet not found (404) — Sheet ID ya Tab name galat hai, check karo';
+      msg = 'Sheet not found (404) — Sheet ID or Tab name is wrong — please check';
     else if (msg.includes('400'))
-      msg = 'Invalid request (400) — Tab name mein special characters avoid karo';
+      msg = 'Invalid request (400) — avoid special characters in the Tab name';
     res.status(500).json({ error: msg });
   }
 });
@@ -2852,7 +2852,7 @@ app.post('/api/fms', requireAuth, requireAdmin, async (req, res) => {
     const d = await getDB();
     await ensureFMSConfigTab(d);
     const { fmsName, sheetName, sheetId, headerRow, totalSteps, steps } = req.body;
-    if (!sheetName || !sheetId) return res.status(400).json({ error: 'sheetName aur sheetId required hain' });
+    if (!sheetName || !sheetId) return res.status(400).json({ error: 'sheetName and sheetId are required' });
     const nowStr = new Date().toISOString().replace('T',' ').split('.')[0];
     const inserted = await d.insert('FMS_Config', {
       fms_name: fmsName || sheetName,
@@ -2981,7 +2981,7 @@ app.post('/api/forms', requireAuth, requireAdmin, async (req, res) => {
     const d = await getDB();
     await ensureFormsConfigTab(d);
     const { formName, sheetName, sheetId, headerRow, fields } = req.body;
-    if (!sheetName || !sheetId) return res.status(400).json({ error: 'sheetName aur sheetId required hain' });
+    if (!sheetName || !sheetId) return res.status(400).json({ error: 'sheetName and sheetId are required' });
     const nowStr = new Date().toISOString().replace('T',' ').split('.')[0];
     const inserted = await d.insert('Forms_Config', {
       form_name: formName || sheetName,
@@ -3036,7 +3036,7 @@ app.post('/api/forms/:id/submit', requireAuth, async (req, res) => {
       spreadsheetId, range: `${form.sheet_name}!${form.header_row}:${form.header_row}`
     }));
     const headers = hdrRes.data.values?.[0] || [];
-    if (!headers.length) return res.status(400).json({ error: 'Sheet headers nahi mile — form config check karo' });
+    if (!headers.length) return res.status(400).json({ error: 'Sheet headers not found — check the form config' });
 
     // Header name se value map karo (case-insensitive)
     const valMap = {};
@@ -3057,9 +3057,9 @@ app.post('/api/forms/:id/submit', requireAuth, async (req, res) => {
   } catch(err) {
     let msg = err.message || 'Unknown error';
     if (msg.includes('403') || msg.toLowerCase().includes('forbidden'))
-      msg = 'Access denied (403) — sheet ko service account email ke saath Editor access de kar share karo';
+      msg = 'Access denied (403) — share the sheet with the service account email as Editor';
     else if (msg.includes('404') || msg.toLowerCase().includes('not found'))
-      msg = 'Sheet not found (404) — Sheet ID ya Tab name galat hai';
+      msg = 'Sheet not found (404) — Sheet ID or Tab name is wrong';
     res.status(500).json({ error: msg });
   }
 });
