@@ -5615,6 +5615,19 @@ function aiToggle() {
 }
 function aiAsk(q) { document.getElementById('aiInput').value = q; aiSend(); }
 const AI_TAGC = { green:['#f0fdf4','#16a34a'], red:['#fef2f2','#dc2626'], amber:['#fefce8','#a16207'], purple:['#f5f3ff','#6d28d9'] };
+let _aiHist = [];   // chat history for the AI (last few turns)
+
+// Mini markdown → HTML (bold, code, bullets) for AI replies
+function aiMd(s) {
+  let h = escH(s);
+  h = h.replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>')
+       .replace(/`([^`\n]+)`/g, '<code style="background:#f1f5f9;padding:1px 5px;border-radius:4px;font-size:11px">$1</code>');
+  h = h.split('\n').map(line => {
+    if (/^\s*[-*•] /.test(line)) return '<div style="display:flex;gap:6px;margin:2px 0"><span>•</span><div>' + line.replace(/^\s*[-*•] /, '') + '</div></div>';
+    return line;
+  }).join('\n').replace(/\n(<div style="display:flex)/g, '$1').replace(/(<\/div><\/div>)\n/g, '$1').replace(/\n/g, '<br>');
+  return h;
+}
 
 async function aiSend() {
   const inp = document.getElementById('aiInput');
@@ -5626,17 +5639,24 @@ async function aiSend() {
   const tid = 'aib' + Date.now();
   box.insertAdjacentHTML('beforeend', `<div class="ai-bub bot" id="${tid}">✨ Thinking…</div>`);
   box.scrollTop = box.scrollHeight;
-  const r = await api('/api/assistant', 'POST', { query: q });
+  const r = await api('/api/assistant', 'POST', { query: q, history: _aiHist });
   const el = document.getElementById(tid);
   if (!el) return;
   if (!r || r.error) { el.textContent = '⚠️ ' + (r?.error || 'Something went wrong — try again'); return; }
-  el.innerHTML = escH(r.text) + (r.items || []).map(it => {
-    const c = AI_TAGC[it.tagColor] || AI_TAGC.purple;
-    return `<div class="ai-item"><span style="flex-shrink:0">${it.icon || '🔹'}</span>
-      <div style="min-width:0;flex:1"><div style="font-weight:700;color:#1e293b;font-size:12px">${escH(it.title)}</div>
-      <div style="color:#64748b;font-size:11px;margin-top:1px">${escH(it.sub || '')}</div></div>
-      ${it.tag ? `<span class="ai-tag" style="background:${c[0]};color:${c[1]}">${escH(it.tag)}</span>` : ''}</div>`;
-  }).join('');
+  _aiHist.push({ role: 'user', content: q });
+  _aiHist.push({ role: 'assistant', content: r.text || '' });
+  _aiHist = _aiHist.slice(-10);
+  if (r.ai) {
+    el.innerHTML = aiMd(r.text);
+  } else {
+    el.innerHTML = escH(r.text) + (r.items || []).map(it => {
+      const c = AI_TAGC[it.tagColor] || AI_TAGC.purple;
+      return `<div class="ai-item"><span style="flex-shrink:0">${it.icon || '🔹'}</span>
+        <div style="min-width:0;flex:1"><div style="font-weight:700;color:#1e293b;font-size:12px">${escH(it.title)}</div>
+        <div style="color:#64748b;font-size:11px;margin-top:1px">${escH(it.sub || '')}</div></div>
+        ${it.tag ? `<span class="ai-tag" style="background:${c[0]};color:${c[1]}">${escH(it.tag)}</span>` : ''}</div>`;
+    }).join('');
+  }
   box.scrollTop = box.scrollHeight;
 }
 

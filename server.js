@@ -3071,12 +3071,125 @@ app.post('/api/forms/:id/submit', requireAuth, async (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════
-// AI ASSISTANT — natural-language search over workspace data
+// AI ASSISTANT — real LLM (Claude / Gemini) + workspace data,
+// with rule-based fallback when no API key is configured.
 // ══════════════════════════════════════════════════════
+
+// Compact, role-scoped snapshot of workspace data for the AI's context
+async function buildAiContext(req) {
+  const d = await getDB();
+  const role = req.session.role;
+  const isMgr = role === 'admin' || role === 'hod' || role === 'pc';
+  const meId = String(req.session.userId);
+  const t = today();
+  const safe = p => p.catch(() => []);
+  const [users, del, chk, leaves, slips, formsRows, cats] = await Promise.all([
+    safe(d.findAll('Users')), safe(d.findAll('Delegation_Tasks')), safe(d.findAll('Checklist_Tasks')),
+    safe(d.findAll('Leaves')), safe(d.findAll('Help_Slips')), safe(d.findAll('Forms_Config')),
+    safe(d.findAll('Catalogues'))
+  ]);
+  const uname = id => (users.find(u => String(u.id) === String(id)) || {}).name || '—';
+  let tasks = [
+    ...del.map(x => ({ ...x, _t: 'delegation' })),
+    ...chk.map(x => ({ ...x, _t: 'checklist' }))
+  ];
+  if (!isMgr) tasks = tasks.filter(x => String(x.assigned_to) === meId);
+  tasks.sort((a, b) => (b.due_date || '').localeCompare(a.due_date || ''));
+
+  const L = [];
+  L.push(`TODAY: ${t}`);
+  L.push(`CURRENT USER: ${uname(meId)} (role: ${role})`);
+  if (isMgr) L.push('USERS: ' + users.map(u => `${u.name} <${u.email}> [${u.role}${u.department ? ', ' + u.department : ''}]`).join('; '));
+  L.push(`TASKS (${tasks.length} total, newest first, max 120 shown):`);
+  tasks.slice(0, 120).forEach(x => {
+    const od = x.status !== 'completed' && x.due_date && x.due_date < t ? ' OVERDUE' : '';
+    L.push(`- [${x._t}] "${String(x.description || '').slice(0, 90)}" | doer: ${uname(x.assigned_to)} | due: ${x.due_date || '—'} | status: ${x.status || 'pending'}${od}`);
+  });
+  const lv = isMgr ? leaves : leaves.filter(l => String(l.user_id) === meId);
+  if (lv.length) L.push('LEAVES: ' + lv.slice(-10).map(l => `${uname(l.user_id)} ${l.from_date}→${l.to_date} (${l.leave_type || 'Leave'}, ${l.status || 'pending'})`).join('; '));
+  const sl = isMgr ? slips : slips.filter(s => String(s.user_id) === meId);
+  if (sl.length) L.push('HELP SLIPS: ' + sl.slice(-10).map(s => `${uname(s.user_id)}: ${String(s.details || '').slice(0, 60)} (${s.status || 'open'})`).join('; '));
+  if (formsRows.length) L.push('FORMS: ' + formsRows.map(f => f.form_name || f.sheet_name).join(', '));
+  if (cats.length) L.push('CATALOGUES: ' + cats.map(c => c.name).join(', '));
+  return L.join('\n');
+}
+
+const AI_SYSTEM = `You are the built-in AI Assistant of "Task Manager", a team task-management app.
+You can answer ANY question — general knowledge, advice, calculations, writing help, anything.
+When the question is about the team's work (tasks, people, leaves, forms, catalogues), answer from the WORKSPACE DATA snapshot provided; be accurate with names, counts and dates from it, and say so if something is not in the data.
+Reply in the same language/style the user writes in (Hindi, Hinglish or English).
+Keep answers short and clear. Use simple markdown: **bold**, and "- " bullet lists. No headings, no tables.`;
+
+// Claude (Anthropic SDK) — used when ANTHROPIC_API_KEY is set
+let _anthropicClient = null;
+async function aiCallClaude(context, msgs) {
+  if (!_anthropicClient) {
+    const Anthropic = require('@anthropic-ai/sdk');
+    _anthropicClient = new Anthropic();
+  }
+  const resp = await _anthropicClient.beta.messages.create({
+    model: 'claude-opus-5',
+    max_tokens: 8192,
+    output_config: { effort: 'low' },
+    betas: ['server-side-fallback-2026-07-01'],
+    fallbacks: 'default',
+    system: AI_SYSTEM + '\n\nWORKSPACE DATA:\n' + context,
+    messages: msgs
+  });
+  if (resp.stop_reason === 'refusal') return 'Sorry, I can\'t help with that request.';
+  return resp.content.filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+}
+
+// Google Gemini (free tier) — used when GEMINI_API_KEY is set
+async function aiCallGemini(context, msgs) {
+  const contents = msgs.map(m => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: m.content }]
+  }));
+  const r = await fetch(
+    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + process.env.GEMINI_API_KEY,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: AI_SYSTEM + '\n\nWORKSPACE DATA:\n' + context }] },
+        contents
+      })
+    }
+  );
+  const j = await r.json();
+  if (j.error) throw new Error(j.error.message || 'Gemini API error');
+  const out = j.candidates?.[0]?.content?.parts?.map(p => p.text).join('') || '';
+  if (!out) throw new Error('Empty response from Gemini');
+  return out.trim();
+}
+
 app.post('/api/assistant', requireAuth, async (req, res) => {
   try {
     const q = String((req.body && req.body.query) || '').trim();
     if (!q) return res.json({ text: 'Ask me anything — try "pending tasks", "overdue", "summary", or a person\'s name.', items: [] });
+
+    // ── Real AI mode (Claude ya Gemini key configured ho to) ──
+    const provider = process.env.ANTHROPIC_API_KEY ? 'claude'
+      : process.env.GEMINI_API_KEY ? 'gemini' : '';
+    if (provider) {
+      try {
+        const context = await buildAiContext(req);
+        const hist = Array.isArray(req.body.history) ? req.body.history.slice(-8) : [];
+        const msgs = [
+          ...hist.filter(m => m && m.content && (m.role === 'user' || m.role === 'assistant'))
+            .map(m => ({ role: m.role, content: String(m.content).slice(0, 2000) })),
+          { role: 'user', content: q }
+        ];
+        const text = provider === 'claude'
+          ? await aiCallClaude(context, msgs)
+          : await aiCallGemini(context, msgs);
+        return res.json({ text, items: [], ai: true });
+      } catch (e) {
+        console.error('AI provider error, falling back to rule-based:', e.message);
+        // fall through to rule-based search below
+      }
+    }
     const ql = q.toLowerCase();
     const d = await getDB();
     const role = req.session.role;
