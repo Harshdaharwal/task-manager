@@ -452,6 +452,155 @@ class MySqlDB {
 }
 
 // ══════════════════════════════════════════════════════
+// POSTGRES DB LAYER — same surface as MySqlDB/SheetDB
+// ══════════════════════════════════════════════════════
+class PgDB {
+  constructor(pool, sheetsClient, schema) {
+    this.pool = pool;
+    this.sheets = sheetsClient;
+    this.schema = schema || 'public';
+    this._cache = {};
+    this._hdrCache = {};
+    this._colsCache = {};
+    this.TTL = 2000;
+  }
+
+  _invalidate(table) { delete this._cache[table]; }
+
+  async _columns(table) {
+    if (this._colsCache[table]) return this._colsCache[table];
+    const { rows } = await this.pool.query(
+      'SELECT column_name FROM information_schema.columns WHERE table_schema=$2 AND table_name=$1 ORDER BY ordinal_position',
+      [table, this.schema]);
+    const cols = rows.map(r => r.column_name);
+    if (!cols.length) throw new Error(`Table not found: ${table}`);
+    this._hdrCache[table] = cols;
+    this._colsCache[table] = new Set(cols);
+    return this._colsCache[table];
+  }
+
+  async getHeaders(table) {
+    if (this._hdrCache[table]) return this._hdrCache[table];
+    await this._columns(table);
+    return this._hdrCache[table];
+  }
+
+  _stringifyRow(row) {
+    const obj = {};
+    for (const k of Object.keys(row)) {
+      const v = row[k];
+      obj[k] = (v === null || v === undefined) ? ''
+        : (v instanceof Date ? v.toISOString() : String(v));
+    }
+    return obj;
+  }
+
+  async findAll(table) {
+    const c = this._cache[table];
+    if (c && (Date.now() - c.ts) < this.TTL) return c.data;
+    const { rows } = await this.pool.query('SELECT * FROM "' + table + '" ORDER BY id ASC');
+    const data = rows.map(r => this._stringifyRow(r));
+    this._cache[table] = { data, ts: Date.now() };
+    return data;
+  }
+
+  async findWhere(table, filter) {
+    const all = await this.findAll(table);
+    return all.filter(row =>
+      Object.keys(filter).every(key =>
+        String(row[key] || '').trim() === String(filter[key] || '').trim()));
+  }
+
+  async findOne(table, filter) {
+    return (await this.findWhere(table, filter))[0] || null;
+  }
+
+  async insert(table, data) {
+    const cols = await this._columns(table);
+    const keys = Object.keys(data).filter(k => k !== 'id' && cols.has(k));
+    let insertId;
+    if (keys.length) {
+      const colList = keys.map(k => '"' + k + '"').join(', ');
+      const ph = keys.map((_, i) => '$' + (i + 1)).join(', ');
+      const vals = keys.map(k => (data[k] == null) ? null : String(data[k]));
+      const { rows } = await this.pool.query(
+        'INSERT INTO "' + table + '" (' + colList + ') VALUES (' + ph + ') RETURNING id', vals);
+      insertId = rows[0].id;
+    } else {
+      const { rows } = await this.pool.query('INSERT INTO "' + table + '" DEFAULT VALUES RETURNING id');
+      insertId = rows[0].id;
+    }
+    this._invalidate(table);
+    data.id = String(insertId);
+    return data;
+  }
+
+  async batchInsert(table, rows) {
+    if (!rows || !rows.length) return [];
+    const cols = await this._columns(table);
+    const keySet = new Set();
+    for (const r of rows) for (const k of Object.keys(r)) if (k !== 'id' && cols.has(k)) keySet.add(k);
+    const keys = [...keySet];
+    if (!keys.length) { for (const r of rows) await this.insert(table, r); return rows; }
+    const colList = keys.map(k => '"' + k + '"').join(', ');
+    const vals = [];
+    const tuples = rows.map(r =>
+      '(' + keys.map(k => { vals.push((r[k] == null) ? null : String(r[k])); return '$' + vals.length; }).join(', ') + ')');
+    const { rows: ret } = await this.pool.query(
+      'INSERT INTO "' + table + '" (' + colList + ') VALUES ' + tuples.join(', ') + ' RETURNING id', vals);
+    rows.forEach((r, i) => { r.id = String(ret[i].id); });
+    this._invalidate(table);
+    return rows;
+  }
+
+  async update(table, id, data) {
+    const cols = await this._columns(table);
+    const keys = Object.keys(data).filter(k => k !== 'id' && cols.has(k));
+    if (keys.length) {
+      const setClause = keys.map((k, i) => '"' + k + '" = $' + (i + 1)).join(', ');
+      const vals = keys.map(k => (data[k] == null) ? null : String(data[k]));
+      vals.push(String(id));
+      await this.pool.query('UPDATE "' + table + '" SET ' + setClause + ' WHERE id = $' + (keys.length + 1), vals);
+    }
+    this._invalidate(table);
+    const { rows } = await this.pool.query('SELECT * FROM "' + table + '" WHERE id = $1 LIMIT 1', [String(id)]);
+    return rows.length ? this._stringifyRow(rows[0]) : { ...data, id: String(id) };
+  }
+
+  async delete(table, id) {
+    await this.pool.query('DELETE FROM "' + table + '" WHERE id = $1', [String(id)]);
+    this._invalidate(table);
+  }
+
+  async batchDeleteByIds(table, ids) {
+    if (!ids || !ids.length) return;
+    const ph = ids.map((_, i) => '$' + (i + 1)).join(', ');
+    await this.pool.query('DELETE FROM "' + table + '" WHERE id IN (' + ph + ')', ids.map(String));
+    this._invalidate(table);
+  }
+}
+
+// Postgres: same MYSQL_SCHEMA se tables/columns auto-create (LONGTEXT → TEXT)
+async function ensurePgSchema(pool, schema) {
+  schema = schema || 'public';
+  let added = 0;
+  for (const [table, cols] of Object.entries(MYSQL_SCHEMA)) {
+    await pool.query('CREATE TABLE IF NOT EXISTS "' + table + '" (id SERIAL PRIMARY KEY)');
+    const { rows: existing } = await pool.query(
+      'SELECT column_name FROM information_schema.columns WHERE table_schema=$2 AND table_name=$1', [table, schema]);
+    const have = new Set(existing.map(r => r.column_name));
+    for (const [col, def] of Object.entries(cols)) {
+      if (!have.has(col)) {
+        await pool.query('ALTER TABLE "' + table + '" ADD COLUMN "' + col + '" ' + def.replace(/LONGTEXT/ig, 'TEXT'));
+        console.log(`  pg schema: + ${table}.${col}`);
+        added++;
+      }
+    }
+  }
+  console.log(added ? `  pg schema auto-migrate: ${added} column(s)/table(s) added` : '  pg schema up to date');
+}
+
+// ══════════════════════════════════════════════════════
 // MYSQL SCHEMA (single source of truth) + auto-migration
 // ══════════════════════════════════════════════════════
 // Add a table or a column here and it is created automatically on the next
@@ -620,6 +769,31 @@ async function initializeDatabase() {
     catch (e) { console.log('  Google Sheets client unavailable — FMS/Forms sheet features disabled:', e.message); }
     db = new MemDB(sheetsApi);
     console.log('  ⚠️ DEMO MODE — in-memory database (restart par data reset ho jata hai)');
+  } else if (driver === 'postgres' || driver === 'pgsql' || driver === 'pg') {
+    let sheetsApi = null;
+    try { sheetsApi = await getSheetsClient(); }
+    catch (e) { console.log('  Google Sheets client unavailable — FMS/Forms sheet features disabled:', e.message); }
+    const { Pool } = require('pg');
+    // PG 15+ me 'public' schema aksar locked hota hai — apna schema use karo
+    const pgSchema = process.env.DB_SCHEMA || 'taskmanager';
+    const pool = new Pool({
+      host: process.env.DB_HOST,
+      port: parseInt(process.env.DB_PORT) || 5432,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+      max: 5,
+      connectionTimeoutMillis: 15000,
+      options: '-c search_path=' + pgSchema + ',public',
+      ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
+    });
+    await pool.query('SELECT 1');
+    if (pgSchema !== 'public') {
+      await pool.query('CREATE SCHEMA IF NOT EXISTS "' + pgSchema + '"');
+    }
+    await ensurePgSchema(pool, pgSchema); // auto-create missing tables/columns
+    db = new PgDB(pool, sheetsApi, pgSchema);
+    console.log(`  PostgreSQL DB connected (${process.env.DB_NAME} · schema: ${pgSchema})`);
   } else if (driver === 'mysql') {
     // Google client is still needed for the FMS feature — load it but don't
     // fail MySQL startup if credentials are unavailable.
