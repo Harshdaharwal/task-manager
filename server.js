@@ -659,6 +659,12 @@ const MYSQL_SCHEMA = {
     sheet_id: "VARCHAR(255) DEFAULT ''", header_row: "VARCHAR(10) DEFAULT '1'",
     fields_json: "TEXT", created_at: "VARCHAR(40) DEFAULT ''"
   },
+  Catalogues: {
+    name: "VARCHAR(255) DEFAULT ''", file_name: "VARCHAR(255) DEFAULT ''",
+    file_link: "TEXT", file_id: "VARCHAR(64) DEFAULT ''",
+    sort_order: "VARCHAR(10) DEFAULT '0'", created_by: "VARCHAR(20) DEFAULT ''",
+    created_at: "VARCHAR(40) DEFAULT ''"
+  },
   Leaves: {
     user_id: "VARCHAR(20) DEFAULT ''", from_date: "VARCHAR(40) DEFAULT ''", to_date: "VARCHAR(40) DEFAULT ''",
     leave_type: "VARCHAR(40) DEFAULT ''", reason: "TEXT", status: "VARCHAR(20) DEFAULT 'pending'",
@@ -3180,6 +3186,141 @@ app.post('/api/assistant', requireAuth, async (req, res) => {
     }
     res.json({ text, items });
   } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ══════════════════════════════════════════════════════
+// CATALOGUES — name + PDF (PDF stored in Postgres, chunked upload)
+// Everyone can view/open; upload & delete are admin-only.
+// ══════════════════════════════════════════════════════
+const CAT_MAX_BYTES = 50 * 1024 * 1024;   // up to 50MB per PDF
+
+// PDF bytes live in a separate Postgres table (BYTEA)
+let _catFilesReady = false;
+async function catFilesPool() {
+  const d = await getDB();
+  if (!d.pool || !(d instanceof PgDB)) {
+    throw new Error('PDF upload needs the PostgreSQL database (DB_DRIVER=postgres)');
+  }
+  if (!_catFilesReady) {
+    await d.pool.query(`CREATE TABLE IF NOT EXISTS app_files (
+      id TEXT PRIMARY KEY, filename TEXT, mime TEXT, data BYTEA
+    )`);
+    _catFilesReady = true;
+  }
+  return d.pool;
+}
+
+// Chunked upload — Vercel accepts ~4.5MB per request, so the browser sends the
+// file in pieces. First chunk creates the row; the rest append via data || chunk.
+app.post('/api/catalogues/upload-file', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { fileId, filename, dataBase64, last } = req.body;
+    if (!dataBase64) return res.status(400).json({ error: 'dataBase64 required' });
+    const chunk = Buffer.from(dataBase64, 'base64');
+    if (!chunk.length) return res.status(400).json({ error: 'File data is empty' });
+    const pool = await catFilesPool();
+    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+    let id = String(fileId || '').trim();
+
+    if (!id) {
+      if (!filename) return res.status(400).json({ error: 'filename required' });
+      const ext = String(filename).split('.').pop().toLowerCase();
+      let mt = String(req.body.mimeType || '').toLowerCase();
+      if (!mt || mt === 'application/octet-stream') mt = ext === 'pdf' ? 'application/pdf' : '';
+      if (mt !== 'application/pdf' || ext !== 'pdf') {
+        return res.status(400).json({ error: 'Only PDF files can be uploaded' });
+      }
+      const safeName = `${Date.now()}_${filename.replace(/[^\w.\- ]+/g, '_')}`;
+      id = require('crypto').randomBytes(18).toString('base64url');
+      await pool.query('INSERT INTO app_files (id, filename, mime, data) VALUES ($1,$2,$3,$4)', [id, safeName, mt, chunk]);
+    } else {
+      const { rows } = await pool.query('SELECT octet_length(data) AS len, mime FROM app_files WHERE id=$1', [id]);
+      if (!rows[0]) return res.status(404).json({ error: 'Upload session not found — please retry' });
+      if (rows[0].mime !== 'application/pdf') return res.status(400).json({ error: 'Only PDF files can be uploaded' });
+      if (Number(rows[0].len) + chunk.length > CAT_MAX_BYTES) {
+        await pool.query('DELETE FROM app_files WHERE id=$1', [id]);
+        return res.status(400).json({ error: `PDF is larger than ${Math.round(CAT_MAX_BYTES / 1024 / 1024)}MB` });
+      }
+      await pool.query('UPDATE app_files SET data = data || $1 WHERE id=$2', [chunk, id]);
+    }
+
+    if (!last) return res.json({ success: true, fileId: id });
+
+    // Final chunk — verify it is really a PDF
+    const { rows: fin } = await pool.query('SELECT octet_length(data) AS len, substring(data from 1 for 4) AS head FROM app_files WHERE id=$1', [id]);
+    const head = Buffer.from(fin[0]?.head || '').toString();
+    if (head !== '%PDF') {
+      await pool.query('DELETE FROM app_files WHERE id=$1', [id]);
+      return res.status(400).json({ error: 'This is not a valid PDF file' });
+    }
+    res.json({ success: true, fileId: id, size: Number(fin[0].len), link: `${proto}://${req.get('host')}/f/${id}`, name: filename });
+  } catch (err) {
+    console.error('Catalogue upload FAILED:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// List — everyone can see
+app.get('/api/catalogues', requireAuth, async (req, res) => {
+  try {
+    const d = await getDB();
+    const [rows, users] = await Promise.all([d.findAll('Catalogues'), d.findAll('Users')]);
+    const uname = id => (users.find(u => String(u.id) === String(id)) || {}).name || '';
+    res.json(rows
+      .map(c => ({
+        id: parseInt(c.id), name: c.name, file_name: c.file_name, file_link: c.file_link,
+        file_id: c.file_id || '', sort_order: parseInt(c.sort_order) || 0,
+        createdByName: uname(c.created_by), created_at: c.created_at || ''
+      }))
+      .sort((a, b) => (a.sort_order - b.sort_order) || (a.id - b.id)));
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Create (admin) — after the PDF is uploaded
+app.post('/api/catalogues', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const d = await getDB();
+    const name = String(req.body?.name || '').trim();
+    const fileLink = String(req.body?.fileLink || '').trim();
+    const fileName = String(req.body?.fileName || '').trim();
+    const fileIdRef = String(req.body?.fileId || '').trim();
+    if (!name) return res.status(400).json({ error: 'Catalogue name is required' });
+    if (!fileLink) return res.status(400).json({ error: 'Please upload a PDF first' });
+    const all = await d.findAll('Catalogues');
+    const next = all.reduce((m, c) => Math.max(m, parseInt(c.sort_order) || 0), 0) + 1;
+    const nowStr = new Date().toISOString().replace('T', ' ').split('.')[0];
+    await d.insert('Catalogues', {
+      name, file_name: fileName, file_link: fileLink, file_id: fileIdRef,
+      sort_order: String(next), created_by: String(req.session.userId), created_at: nowStr
+    });
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Delete (admin) — also removes the stored PDF bytes
+app.delete('/api/catalogues/:id', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const d = await getDB();
+    const row = await d.findOne('Catalogues', { id: String(req.params.id) });
+    if (row && row.file_id) {
+      try { const pool = await catFilesPool(); await pool.query('DELETE FROM app_files WHERE id=$1', [row.file_id]); } catch (e) {}
+    }
+    await d.delete('Catalogues', req.params.id);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Public file serve — unguessable random id, so no auth needed
+app.get('/f/:id', async (req, res) => {
+  try {
+    const pool = await catFilesPool();
+    const { rows } = await pool.query('SELECT filename, mime, data FROM app_files WHERE id=$1', [req.params.id]);
+    if (!rows[0]) return res.status(404).send('File not found');
+    res.set('Content-Type', rows[0].mime);
+    res.set('Content-Disposition', `inline; filename="${(rows[0].filename || 'file').replace(/"/g, '')}"`);
+    res.set('Cache-Control', 'public, max-age=31536000, immutable');
+    res.send(rows[0].data);
+  } catch (err) { res.status(500).send('Error: ' + err.message); }
 });
 
 // GET /api/fms-tasks — list FMS configs (for task view dropdown)

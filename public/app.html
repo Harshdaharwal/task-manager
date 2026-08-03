@@ -785,6 +785,10 @@ button:disabled{opacity:.65;cursor:not-allowed !important;}
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
       <span class="nav-label-text">Forms</span>
     </div>
+    <div class="nav-item" id="nav-catalogs" onclick="navigate('catalogs',this)">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+      <span class="nav-label-text">Catalogues</span>
+    </div>
     <div class="nav-item" id="nav-leaves" onclick="navigate('leaves',this)">
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
       <span class="nav-label-text">Leave Tracker</span>
@@ -1339,6 +1343,23 @@ button:disabled{opacity:.65;cursor:not-allowed !important;}
     </div>
   </div>
 
+  <!-- ── CATALOGUES ── -->
+  <div id="page-catalogs" class="page">
+    <div class="page-header">
+      <h2>📚 Catalogues</h2>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span id="catCount" style="font-size:12px;color:#64748b;font-weight:600"></span>
+        <button id="catUploadBtn" class="btn btn-primary" style="display:none" onclick="openCatUpload()">➕ Upload Catalogue</button>
+      </div>
+    </div>
+    <div id="catList" class="fm-grid"></div>
+    <div id="catEmpty" style="display:none;background:#fff;border-radius:16px;border:1px dashed #c4b5fd;text-align:center;padding:48px 20px">
+      <div style="width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,#f5f3ff,#ede9fe);display:grid;place-items:center;font-size:30px;margin:0 auto 14px">📚</div>
+      <div style="font-size:15px;font-weight:800;color:#1e293b">No catalogues yet</div>
+      <div style="font-size:12.5px;color:#64748b;margin-top:5px">Click "➕ Upload Catalogue" to add a name + PDF.</div>
+    </div>
+  </div>
+
   <!-- ── FORMS ── -->
   <div id="page-forms" class="page">
     <div class="page-header">
@@ -1830,6 +1851,39 @@ button:disabled{opacity:.65;cursor:not-allowed !important;}
         <button class="btn btn-outline" onclick="closeModal('formFillModal')">Cancel</button>
         <button class="btn btn-primary" id="formFillSubmitBtn" onclick="submitFormFill()">✅ Submit</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     CATALOGUE - UPLOAD MODAL
+══════════════════════════════════════ -->
+<div class="modal-overlay" id="catUploadModal">
+  <div class="modal" style="max-width:460px">
+    <h3 style="margin-bottom:4px">📚 Upload Catalogue</h3>
+    <div style="font-size:12px;color:#64748b;margin-bottom:16px">Name + PDF (up to 50MB) — stored safely in your database</div>
+    <div class="alert error" id="catErr"></div>
+    <div class="form-group">
+      <label>Catalogue Name</label>
+      <input class="fm-input" type="text" id="catName" placeholder="e.g. Apparel Catalogue 2026"/>
+    </div>
+    <div class="form-group">
+      <label>PDF File</label>
+      <label id="catDrop" for="catFile" style="display:block;border:2px dashed #c4b5fd;border-radius:12px;padding:22px;text-align:center;cursor:pointer;background:#faf5ff;transition:all .2s">
+        <div style="font-size:26px;margin-bottom:6px">📄</div>
+        <div id="catDropText" style="font-size:12.5px;font-weight:600;color:#6d28d9">Click to choose a PDF file</div>
+      </label>
+      <input type="file" id="catFile" accept="application/pdf,.pdf" style="display:none" onchange="catFileChosen()"/>
+    </div>
+    <div id="catProgWrap" style="display:none;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;font-size:11.5px;font-weight:600;color:#64748b;margin-bottom:5px">
+        <span>Uploading…</span><span id="catPct">0%</span>
+      </div>
+      <div class="ow-bar" style="height:9px"><div id="catProgBar" style="width:0%"></div></div>
+    </div>
+    <div class="modal-footer" style="justify-content:space-between">
+      <button class="btn btn-outline" onclick="closeModal('catUploadModal')">Cancel</button>
+      <button class="btn btn-primary" id="catSaveBtn" onclick="saveCatalogue()">⬆️ Upload & Save</button>
     </div>
   </div>
 </div>
@@ -2588,7 +2642,7 @@ function setMinDates() {
 // ══════════════════════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════════════════════
-const pageTitles = {dashboard:'Dashboard',owner:'Owner Dashboard',alltasks:'All Tasks',approvals:'Approvals',users:'Users',profile:'Profile',mis:'MIS Report',fms:'FMS Admin','fms-tasks':'FMS Tasks',forms:'Forms',records:'Employee Records',leaves:'Leave Tracker',helpslip:'Help Slip'};
+const pageTitles = {dashboard:'Dashboard',owner:'Owner Dashboard',alltasks:'All Tasks',approvals:'Approvals',users:'Users',profile:'Profile',mis:'MIS Report',fms:'FMS Admin','fms-tasks':'FMS Tasks',forms:'Forms',catalogs:'Catalogues',records:'Employee Records',leaves:'Leave Tracker',helpslip:'Help Slip'};
 
 function navigate(page, el) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -2609,6 +2663,7 @@ function navigate(page, el) {
   if (page==='fms') loadFMSAdmin();
   if (page==='fms-tasks') loadFMSTasks();
   if (page==='forms') loadForms();
+  if (page==='catalogs') loadCatalogues();
   if (page==='owner') loadOwnerDash();
   if (page==='mis') initMISDeptFilter();
   if (page==='records') loadRecords();
@@ -5428,6 +5483,122 @@ function exportRecords() {
   a.download = `Employee_Records_${start}.csv`;
   a.click();
   showToast('CSV exported!');
+}
+
+// ══════════════════════════════════════════════════════
+// CATALOGUES — name + PDF upload (chunked, stored in Postgres)
+// ══════════════════════════════════════════════════════
+let _catalogues = [];
+let _catFile = null;
+
+async function loadCatalogues() {
+  document.getElementById('catUploadBtn').style.display = ME.role==='admin' ? 'inline-flex' : 'none';
+  const d = await api('/api/catalogues');
+  _catalogues = Array.isArray(d) ? d : [];
+  if (d && d.error) showToast('⚠️ '+d.error,'error');
+  renderCatalogues();
+}
+
+function renderCatalogues() {
+  const list = document.getElementById('catList');
+  const empty = document.getElementById('catEmpty');
+  document.getElementById('catCount').textContent = _catalogues.length ? _catalogues.length + ' catalogue(s)' : '';
+  if (!_catalogues.length) { list.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  const isAdmin = ME.role==='admin';
+  list.innerHTML = _catalogues.map(c => `
+    <div class="fm-card">
+      <div style="display:flex;align-items:flex-start;gap:12px">
+        <div class="fm-ico" style="background:linear-gradient(135deg,#dc2626,#f87171)">📕</div>
+        <div style="min-width:0;flex:1">
+          <div style="font-weight:800;color:#1e293b;font-size:14px;line-height:1.35" title="${escH(c.name)}">${escH(c.name)}</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escH(c.file_name)}">${escH(c.file_name||'')}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:7px;margin-top:2px">
+        <button class="btn btn-outline btn-sm" style="flex:1;color:#2563eb;border-color:#bfdbfe" onclick="window.open('${escH(c.file_link)}','_blank')">📄 Open PDF</button>
+        ${isAdmin ? `<button class="btn btn-outline btn-sm" style="color:#dc2626;border-color:#fecaca" onclick="deleteCatalogue(${c.id})" title="Delete">🗑</button>` : ''}
+      </div>
+    </div>`).join('');
+}
+
+function openCatUpload() {
+  _catFile = null;
+  document.getElementById('catName').value = '';
+  document.getElementById('catFile').value = '';
+  document.getElementById('catDropText').textContent = 'Click to choose a PDF file';
+  document.getElementById('catErr').style.display='none';
+  document.getElementById('catProgWrap').style.display='none';
+  document.getElementById('catSaveBtn').disabled = false;
+  document.getElementById('catUploadModal').classList.add('open');
+}
+
+function catFileChosen() {
+  const f = document.getElementById('catFile').files[0];
+  if (!f) return;
+  if (!/\.pdf$/i.test(f.name)) { catErrMsg('Only PDF files are allowed'); return; }
+  if (f.size > 50*1024*1024) { catErrMsg('PDF is larger than 50MB'); return; }
+  _catFile = f;
+  document.getElementById('catDropText').textContent = '✅ ' + f.name + ' (' + (f.size/1024/1024).toFixed(1) + ' MB)';
+  const nameInp = document.getElementById('catName');
+  if (!nameInp.value.trim()) nameInp.value = f.name.replace(/\.pdf$/i,'').replace(/[_-]+/g,' ');
+}
+
+function catErrMsg(m) {
+  const el = document.getElementById('catErr');
+  el.textContent = m; el.style.display='block';
+  setTimeout(()=>{ el.style.display='none'; }, 6000);
+}
+
+async function saveCatalogue() {
+  const name = document.getElementById('catName').value.trim();
+  if (!name) return catErrMsg('Enter a catalogue name');
+  if (!_catFile) return catErrMsg('Choose a PDF file');
+  const btn = document.getElementById('catSaveBtn');
+  btn.disabled = true; btn.textContent = '⏳ Uploading…';
+  document.getElementById('catProgWrap').style.display='block';
+  const setPct = p => {
+    document.getElementById('catPct').textContent = p + '%';
+    document.getElementById('catProgBar').style.width = p + '%';
+  };
+  try {
+    // Chunked upload — 1.5MB per request (Vercel-safe)
+    const CHUNK = 1536 * 1024;
+    let fileId = '', fin = null;
+    for (let off = 0; off < _catFile.size; off += CHUNK) {
+      const buf = await _catFile.slice(off, off + CHUNK).arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      let bin = '';
+      for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+      const last = off + CHUNK >= _catFile.size;
+      const r = await api('/api/catalogues/upload-file','POST',{
+        fileId, filename: _catFile.name, mimeType: _catFile.type || 'application/pdf',
+        dataBase64: btoa(bin), last
+      });
+      if (!r || r.error) throw new Error(r?.error || 'Upload failed');
+      fileId = r.fileId;
+      setPct(Math.min(100, Math.round(((off + CHUNK) / _catFile.size) * 100)));
+      if (last) fin = r;
+    }
+    const r2 = await api('/api/catalogues','POST',{ name, fileLink: fin.link, fileName: _catFile.name, fileId });
+    if (!r2 || r2.error) throw new Error(r2?.error || 'Save failed');
+    closeModal('catUploadModal');
+    showToast('✅ Catalogue uploaded!');
+    loadCatalogues();
+  } catch(e) {
+    catErrMsg(e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '⬆️ Upload & Save';
+  }
+}
+
+async function deleteCatalogue(id) {
+  const c = _catalogues.find(x=>x.id===id);
+  if (!confirm(`Delete "${c?c.name:'catalogue'}"? The PDF will also be removed.`)) return;
+  const r = await api('/api/catalogues/'+id,'DELETE');
+  if (r && r.error) return showToast('⚠️ '+r.error,'error');
+  showToast('🗑 Catalogue deleted');
+  loadCatalogues();
 }
 
 // ══════════════════════════════════════════════════════
