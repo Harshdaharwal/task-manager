@@ -645,7 +645,14 @@ async function initializeDatabase() {
     console.log(`  MySQL DB connected (${process.env.DB_NAME})`);
   } else {
     if (!SHEET_ID) {
-      throw new Error('Database connected nahi hai — .env me SHEET_ID set karo (ya DB_DRIVER=mysql + DB_* values, ya bina DB ke chalane ke liye DB_DRIVER=demo). Naya database milne par yahin connect hoga.');
+      // Koi database configure nahi hai → DEMO MODE fallback, taaki app har
+      // jagah (fresh clone / Vercel bina env vars) turant chal jaye.
+      let sheetsApi = null;
+      try { sheetsApi = await getSheetsClient(); } catch(e) {}
+      db = new MemDB(sheetsApi);
+      console.log('  ⚠️ Koi DB configure nahi — DEMO MODE fallback (in-memory). Real DB ke liye .env me SHEET_ID ya MySQL set karo.');
+      try { await seedAdminIfNeeded(); } catch(e) {}
+      return db;
     }
     const sheetsApi = await getSheetsClient();
     await withRetry(() => sheetsApi.spreadsheets.get({ spreadsheetId: SHEET_ID, fields: 'spreadsheetId' }));
