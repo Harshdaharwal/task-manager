@@ -665,6 +665,9 @@ const MYSQL_SCHEMA = {
     sort_order: "VARCHAR(10) DEFAULT '0'", created_by: "VARCHAR(20) DEFAULT ''",
     created_at: "VARCHAR(40) DEFAULT ''"
   },
+  App_Settings: {
+    setting_key: "VARCHAR(100) DEFAULT ''", setting_value: "TEXT"
+  },
   Leaves: {
     user_id: "VARCHAR(20) DEFAULT ''", from_date: "VARCHAR(40) DEFAULT ''", to_date: "VARCHAR(40) DEFAULT ''",
     leave_type: "VARCHAR(40) DEFAULT ''", reason: "TEXT", status: "VARCHAR(20) DEFAULT 'pending'",
@@ -1095,16 +1098,37 @@ function normalizePhone(raw) {
   return d;
 }
 
-// Fire-and-forget WhatsApp send. Never throws — logs and returns a status object.
+// WhatsApp config DB se bhi aa sakta hai (App_Settings: wa_enabled, wa_url,
+// wa_api_key) — isse har deployment (koi bhi URL) par bina env vars ke chalta
+// hai. DB values env/file config ko override karti hain. 60s cache.
+let _waDbCfg = { data: null, ts: 0 };
+async function getWaDbConfig() {
+  if (_waDbCfg.data && Date.now() - _waDbCfg.ts < 60000) return _waDbCfg.data;
+  try {
+    const d = await getDB();
+    const rows = await d.findAll('App_Settings');
+    const map = {};
+    rows.forEach(r => { if (r.setting_key) map[r.setting_key] = r.setting_value || ''; });
+    _waDbCfg = { data: map, ts: Date.now() };
+    return map;
+  } catch (e) { return _waDbCfg.data || {}; }
+}
+
+// WhatsApp send. Never throws — logs and returns a status object.
 async function sendWhatsApp(rawPhone, message) {
-  if (!WA.enabled) return { skipped: 'disabled' };
+  const dbCfg = await getWaDbConfig();
+  const enabled = (dbCfg.wa_enabled !== undefined && dbCfg.wa_enabled !== '')
+    ? String(dbCfg.wa_enabled).toLowerCase() === 'true' : WA.enabled;
+  const url = dbCfg.wa_url || WA.url;
+  const apiKey = dbCfg.wa_api_key || WA.apiKey;
+  if (!enabled) return { skipped: 'disabled' };
   const phone = normalizePhone(rawPhone);
   if (!phone) return { skipped: 'no-phone' };
-  if (!WA.url || !WA.apiKey) return { skipped: 'not-configured' };
+  if (!url || !apiKey) return { skipped: 'not-configured' };
   try {
-    const resp = await fetch(WA.url, {
+    const resp = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', [WA.authHeader || 'x-api-key']: WA.apiKey },
+      headers: { 'Content-Type': 'application/json', [WA.authHeader || 'x-api-key']: apiKey },
       body: JSON.stringify({ [WA.phoneField || 'to']: phone, [WA.messageField || 'text']: message }),
       signal: AbortSignal.timeout(WA.timeoutMs || 20000)
     });
