@@ -26,6 +26,6 @@ module.exports = {
   // ── Baaki settings ──
   countryCode:  (process.env.WHATSAPP_COUNTRY_CODE || '91').replace(/\D/g, ''), // 10-digit number ke aage lagega
   reminderHour: parseInt(process.env.WHATSAPP_REMINDER_HOUR) || 10,             // daily reminder (24h, server time)
-  timeoutMs:    30000,
+  timeoutMs:    8000,   // Vercel serverless limit ke andar
   appUrl:       process.env.APP_URL || ''   // message me "Open:" link ke liye
 };

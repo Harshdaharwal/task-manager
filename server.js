@@ -1606,12 +1606,12 @@ app.post('/api/tasks', requireAuth, async (req, res) => {
         approval: approval || 'no', waiting_approval: '0', remarks: remarks || '',
         frequency: '', last_reminder_date: '', created_at: nowStr
       });
-      // Non-blocking notifications — WhatsApp and email fire INDEPENDENTLY so a
-      // slow SMTP send can never delay the WhatsApp (it goes within ~1-2 sec).
-      (async () => {
-        const assigner = await db.findOne('Users', { id: assignedBy });
-        const assignerName = assigner?.name || 'Admin';
-        // WhatsApp — fire immediately, don't wait for email
+      // Serverless-safe: Vercel jaise platforms response bhejte hi background
+      // kaam kill kar dete hain, isliye WhatsApp + email ko (parallel me)
+      // response se PEHLE complete hone dete hain.
+      const assigner = await db.findOne('Users', { id: assignedBy });
+      const assignerName = assigner?.name || 'Admin';
+      await Promise.allSettled([
         getWhatsAppTarget(parseInt(targetUser)).then(waTarget => {
           if (!waTarget) return;
           return sendWhatsApp(waTarget.phone, waDelegationMsg({
@@ -1619,8 +1619,7 @@ app.post('/api/tasks', requireAuth, async (req, res) => {
             desc, dueDate: date,
             priority: priority || 'low', approval: approval || 'no', remarks: remarks || ''
           }));
-        }).catch(e => console.error('  WA notify error:', e.message));
-        // Email — in parallel
+        }).catch(e => console.error('  WA notify error:', e.message)),
         getNotifyTarget(parseInt(targetUser)).then(target => {
           if (!target) return;
           return sendMail(
@@ -1632,23 +1631,23 @@ app.post('/api/tasks', requireAuth, async (req, res) => {
               priority: priority || 'low', approval: approval || 'no', remarks: remarks || ''
             })
           );
-        }).catch(e => console.error('  Email notify error:', e.message));
-      })();
+        }).catch(e => console.error('  Email notify error:', e.message))
+      ]);
     } else {
       await db.insert('Checklist_Tasks', {
         description: desc, assigned_to: targetUser, assigned_by: String(req.session.userId),
         due_date: date, status: 'pending', priority: priority || 'low',
         remarks: remarks || '', frequency: '', created_at: nowStr
       });
-      // Non-blocking WhatsApp to the assignee
-      (async () => {
+      // Serverless-safe: response se pehle WhatsApp complete karo
+      await (async () => {
         const waTarget = await getWhatsAppTarget(parseInt(targetUser));
         if (waTarget) {
           await sendWhatsApp(waTarget.phone, waChecklistMsg({
             assigneeName: waTarget.name, desc, dueText: date, count: 1
           }));
         }
-      })();
+      })().catch(e => console.error('  WA notify error:', e.message));
     }
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -1672,8 +1671,8 @@ app.post('/api/tasks/bulk-checklist', requireAuth, requireAdmin, async (req, res
       remarks: remarks || '', frequency: freq, created_at: nowStr
     }));
     await db.batchInsert('Checklist_Tasks', rows);
-    // Non-blocking WhatsApp — one summary message to the assignee
-    (async () => {
+    // Serverless-safe: response se pehle WhatsApp complete karo
+    await (async () => {
       const waTarget = await getWhatsAppTarget(parseInt(assignedTo));
       if (!waTarget) return;
       const sorted = [...cleanDates].sort();
@@ -1683,7 +1682,7 @@ app.post('/api/tasks/bulk-checklist', requireAuth, requireAdmin, async (req, res
       await sendWhatsApp(waTarget.phone, waChecklistMsg({
         assigneeName: waTarget.name, desc, dueText, count: cleanDates.length
       }));
-    })();
+    })().catch(e => console.error('  WA notify error:', e.message));
     res.json({ success: true, count: cleanDates.length });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -2463,9 +2462,13 @@ app.post('/api/users', requireAuth, requireAdmin, async (req, res) => {
 
 app.put('/api/users/:id', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const { name, email, notification_email, role, password, phone, department, week_off, extra_off } = req.body;
-    const upd = { name, email, notification_email: notification_email || '', role, phone: phone || '', department: department || '', week_off: week_off || '', extra_off: extra_off || '' };
-    if (password) upd.password = password;
+    // Partial-safe: sirf bheje gaye fields update hote hain (missing field
+    // ko blank/null karke user ka data udaana nahi chahiye)
+    const upd = {};
+    for (const f of ['name', 'email', 'notification_email', 'role', 'phone', 'department', 'week_off', 'extra_off']) {
+      if (req.body[f] !== undefined) upd[f] = req.body[f] == null ? '' : String(req.body[f]);
+    }
+    if (req.body.password) upd.password = req.body.password;
     await db.update('Users', req.params.id, upd);
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
