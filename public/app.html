@@ -675,7 +675,165 @@ button:disabled{opacity:.65;cursor:not-allowed !important;}
   #dashFMSSection .task-table-card tbody td:nth-child(3){display:none !important;}
 
   /* ── TOAST ── */
-  #toast{bottom:78px !important;}
+  #toast,.tm-toast{bottom:78px !important;}
+}
+
+/* ══════════════════════════════════════
+   ✨ MOTION — animations layer
+   Sab animations prefers-reduced-motion respect karti hain
+══════════════════════════════════════ */
+:root{
+  --tm-ease-out:cubic-bezier(.22,1,.36,1);
+  --tm-ease-spring:cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes tmFadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes tmFadeDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+@keyframes tmPopUp{from{opacity:0;transform:translateY(18px) scale(.94)}to{opacity:1;transform:none}}
+@keyframes tmPop{0%{transform:scale(1)}40%{transform:scale(1.14)}100%{transform:scale(1)}}
+@keyframes tmSoftPop{from{transform:scale(.9)}to{transform:none}}
+@keyframes tmSlideIn{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+@keyframes tmDropIn{from{opacity:0;transform:translateY(-6px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes tmOverlayIn{from{opacity:0}to{opacity:1}}
+@keyframes tmOverlayOut{to{opacity:0}}
+@keyframes tmModalIn{from{opacity:0;transform:translateY(24px) scale(.95)}to{opacity:1;transform:none}}
+@keyframes tmModalOut{to{opacity:0;transform:translateY(16px) scale(.96)}}
+@keyframes tmSheetIn{from{transform:translateY(100%)}to{transform:none}}
+@keyframes tmSheetOut{to{transform:translateY(100%)}}
+@keyframes tmPanelIn{from{opacity:0;transform:translateY(16px) scale(.9)}to{opacity:1;transform:none}}
+@keyframes tmBubIn{from{opacity:0;transform:translateY(8px) scale(.9)}to{opacity:1;transform:none}}
+@keyframes tmGrowX{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes tmGleam{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+@keyframes tmRipple{to{transform:translate(-50%,-50%) scale(1);opacity:0}}
+@keyframes tmPing{0%{transform:scale(1);opacity:.75}80%,100%{transform:scale(2);opacity:0}}
+@keyframes tmPingPill{0%{transform:scale(1);opacity:.7}80%,100%{transform:scale(1.25,1.7);opacity:0}}
+@keyframes tmFabPulse{0%{box-shadow:0 8px 24px rgba(124,58,237,.45),0 0 0 0 rgba(167,139,250,.55)}70%,100%{box-shadow:0 8px 24px rgba(124,58,237,.45),0 0 0 16px rgba(167,139,250,0)}}
+@keyframes tmBellLoop{0%,12%,100%{transform:rotate(0)}2%{transform:rotate(16deg)}4%{transform:rotate(-14deg)}6%{transform:rotate(10deg)}8%{transform:rotate(-6deg)}10%{transform:rotate(3deg)}}
+@keyframes tmBell{0%,100%{transform:rotate(0)}15%{transform:rotate(16deg)}30%{transform:rotate(-14deg)}45%{transform:rotate(10deg)}60%{transform:rotate(-6deg)}75%{transform:rotate(3deg)}}
+@keyframes tmToastIn{from{opacity:0;transform:translateX(48px) scale(.92)}to{opacity:1;transform:none}}
+@keyframes tmToastOut{to{opacity:0;transform:translateX(48px) scale(.96)}}
+@keyframes tmTimer{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+@keyframes tmShake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+@keyframes tmTitleIn{from{opacity:0;transform:translateY(6px);filter:blur(3px)}to{opacity:1;transform:none;filter:none}}
+@keyframes tmNavBounce{0%{transform:scale(1)}35%{transform:scale(1.28) translateY(-2px)}65%{transform:scale(.94)}100%{transform:scale(1)}}
+
+/* Ripple (JS click pe inject karta hai) */
+.tm-ripple-wrap{position:absolute;inset:0;overflow:hidden;border-radius:inherit;pointer-events:none;}
+.tm-ripple{position:absolute;border-radius:50%;background:currentColor;opacity:.22;transform:translate(-50%,-50%) scale(0);animation:tmRipple .6s var(--tm-ease-out) forwards;pointer-events:none;}
+
+@media (prefers-reduced-motion:no-preference){
+  /* ── Page switch ── */
+  .page.active{animation:tmFadeUp .45s var(--tm-ease-out) backwards;}
+  .page.active .page-header h2,.page.active .dash-topbar h2{animation:tmSlideIn .5s var(--tm-ease-out) .05s backwards;}
+  .topbar-title.tm-title-in{animation:tmTitleIn .45s var(--tm-ease-out);}
+
+  /* ── Dashboard stat cards — staggered spring ── */
+  .page.active .ov-card{animation:tmPopUp .6s var(--tm-ease-spring) backwards;}
+  .page.active .ov-card:nth-child(2){animation-delay:.07s;}
+  .page.active .ov-card:nth-child(3){animation-delay:.14s;}
+  .page.active .ov-card:nth-child(4){animation-delay:.21s;}
+  .page.active .chart-card,.page.active .task-table-card,.page.active .profile-card,
+  .page.active .mis-table-wrap,.page.active .users-grid,.page.active .flat-tasks-table{animation:tmFadeUp .55s var(--tm-ease-out) .16s backwards;}
+  .page.active .chart-card + .chart-card{animation-delay:.24s;}
+  .ov-card .number{transform-origin:left center;}
+  .ov-card .number.tm-bump,.ow-num.tm-bump{animation:tmPop .45s var(--tm-ease-spring);}
+  .ow-num{transform-origin:left center;}
+
+  /* Card hover — glass gleam sweep */
+  .ov-card::after,.ow-tile::after,.fm-card::after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.55) 50%,transparent 70%);transform:translateX(-110%);}
+  .ov-card:hover::after,.ow-tile:hover::after,.fm-card:hover::after{transform:translateX(110%);transition:transform .9s var(--tm-ease-out);}
+  .ov-card::before{transition:height .25s var(--tm-ease-out);}
+  .ov-card:hover::before{height:6px;}
+  .user-task-block{transition:box-shadow .25s,transform .25s var(--tm-ease-out);}
+  .user-task-block:hover{box-shadow:0 8px 24px rgba(124,58,237,.12);}
+
+  /* ── Sidebar ── */
+  .sidebar .nav-item{animation:tmSlideIn .45s var(--tm-ease-out) backwards;}
+  .sidebar .nav-item:nth-child(2){animation-delay:.03s;}
+  .sidebar .nav-item:nth-child(3){animation-delay:.06s;}
+  .sidebar .nav-item:nth-child(4){animation-delay:.09s;}
+  .sidebar .nav-item:nth-child(5){animation-delay:.12s;}
+  .sidebar .nav-item:nth-child(6){animation-delay:.15s;}
+  .sidebar .nav-item:nth-child(7){animation-delay:.18s;}
+  .sidebar .nav-item:nth-child(8){animation-delay:.21s;}
+  .sidebar .nav-item:nth-child(9){animation-delay:.24s;}
+  .sidebar .nav-item:nth-child(10){animation-delay:.27s;}
+  .sidebar .nav-item:nth-child(n+11){animation-delay:.3s;}
+  .nav-item:hover svg{transform:scale(1.12);}
+  .nav-item.active svg,.mob-nav-item.active svg{animation:tmNavBounce .5s var(--tm-ease-spring);}
+  .nav-item.active::after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(100deg,transparent 25%,rgba(196,181,253,.28) 50%,transparent 75%);animation:tmGleam .9s var(--tm-ease-out) both;}
+  .mob-nav-item{transition:color .15s,transform .15s;}
+  .mob-nav-item:active{transform:scale(.9);}
+
+  /* ── Buttons — lift + press ── */
+  .btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 14px -6px rgba(15,23,42,.35);}
+  .btn-primary:hover:not(:disabled){box-shadow:0 8px 20px -6px rgba(124,58,237,.6);}
+  .btn:active:not(:disabled){transform:translateY(0) scale(.97);box-shadow:none;}
+  .action-btn:hover{transform:translateY(-1px);}
+  .action-btn:active,.chip:active,.tab:active,.fms-done-btn:active{transform:scale(.94);}
+  .tab.active,.chip.active,.fms-name-tab.active,.fms-step-tab.active{animation:tmSoftPop .3s var(--tm-ease-spring);}
+
+  /* ── Inputs — soft focus ring ── */
+  .form-group input,.form-group select,.form-group textarea{transition:border-color .2s,box-shadow .25s;}
+  .form-group input:focus,.form-group select:focus,.form-group textarea:focus{box-shadow:0 0 0 3px rgba(167,139,250,.18);}
+
+  /* ── Modals — spring in, smooth out ── */
+  .modal-overlay.open{animation:tmOverlayIn .25s ease backwards;}
+  .modal-overlay.open .modal{animation:tmModalIn .45s var(--tm-ease-spring) backwards;}
+  .modal-overlay.open .modal > *{animation:tmFadeUp .4s var(--tm-ease-out) backwards;}
+  .modal-overlay.open .modal > *:nth-child(1){animation-delay:.06s;}
+  .modal-overlay.open .modal > *:nth-child(2){animation-delay:.09s;}
+  .modal-overlay.open .modal > *:nth-child(3){animation-delay:.12s;}
+  .modal-overlay.open .modal > *:nth-child(4){animation-delay:.15s;}
+  .modal-overlay.open .modal > *:nth-child(5){animation-delay:.18s;}
+  .modal-overlay.open .modal > *:nth-child(6){animation-delay:.21s;}
+  .modal-overlay.open .modal > *:nth-child(n+7){animation-delay:.24s;}
+  .modal-overlay.tm-closing:not(.open){display:flex;pointer-events:none;animation:tmOverlayOut .22s ease forwards;}
+  .modal-overlay.tm-closing:not(.open) .modal{animation:tmModalOut .22s ease forwards;}
+
+  /* ── Dropdowns / accordion / alerts ── */
+  #notifDropdown{animation:tmDropIn .25s var(--tm-ease-out);transform-origin:top right;}
+  .multi-select-dropdown.open{animation:tmDropIn .22s var(--tm-ease-out);transform-origin:top center;}
+  .utb-body.open{animation:tmFadeDown .3s var(--tm-ease-out);}
+  .alert.error{animation:tmShake .4s ease;}
+  .alert.success{animation:tmFadeDown .35s var(--tm-ease-out);}
+  .empty{animation:tmFadeUp .5s var(--tm-ease-out) backwards;}
+
+  /* ── Progress bars grow in ── */
+  .ow-bar>div,.mis-score-fill{transform-origin:left center;animation:tmGrowX .9s var(--tm-ease-out) .1s backwards;}
+
+  /* ── Live badges — ping ring ── */
+  #notifBadge::after,#approvalBadge::after,.mob-nav-badge.show::after{content:'';position:absolute;inset:0;border-radius:inherit;border:2px solid #ef4444;animation:tmPing 1.8s cubic-bezier(0,0,.2,1) infinite;pointer-events:none;}
+  .priority-badge.urgent{position:relative;}
+  .priority-badge.urgent::after{content:'';position:absolute;inset:0;border-radius:inherit;border:1.5px solid #ef4444;animation:tmPingPill 1.8s cubic-bezier(0,0,.2,1) infinite;pointer-events:none;}
+  #notifBell{transform-origin:50% 15%;}
+  #notifBell:hover{animation:tmBell .8s ease;}
+  #notifBell:has(#notifBadge[style*="display: block"]):not(:hover){animation:tmBellLoop 5s ease-in-out 1s infinite;}
+
+  /* ── AI assistant ── */
+  .ai-fab{animation:tmFabPulse 2.8s ease-out infinite;}
+  .ai-fab:hover{transform:scale(1.1) rotate(-8deg);}
+  .ai-panel.open{animation:tmPanelIn .4s var(--tm-ease-spring) backwards;transform-origin:bottom right;}
+  .ai-bub{animation:tmBubIn .35s var(--tm-ease-spring) backwards;}
+  .ai-bub.user{transform-origin:bottom right;}
+  .ai-bub.bot{transform-origin:bottom left;}
+  .ai-chip{transition:transform .15s,background .15s;}
+  .ai-chip:hover{transform:translateY(-1px);}
+
+  /* ── Table rows ── */
+  tbody tr{transition:background .15s;}
+
+  /* ── Toast ── */
+  .tm-toast{animation:tmToastIn .45s var(--tm-ease-spring) backwards;}
+  .tm-toast.tm-out{animation:tmToastOut .3s ease forwards;}
+  .tm-toast::after{content:'';position:absolute;left:0;bottom:0;height:3px;width:100%;background:rgba(255,255,255,.5);transform-origin:left center;animation:tmTimer var(--tm-life,3s) linear forwards;}
+
+  @media(max-width:768px){
+    .ov-card .number{transform-origin:center;}
+    .modal-overlay.open .modal{animation:tmSheetIn .5s var(--tm-ease-out) backwards;}
+    .modal-overlay.tm-closing:not(.open) .modal{animation:tmSheetOut .25s cubic-bezier(.4,0,1,1) forwards;}
+    .tm-toast{animation-name:tmFadeUp;}
+    .tm-toast.tm-out{animation-name:tmOverlayOut;}
+  }
 }
 </style>
 </head>
@@ -2653,7 +2811,9 @@ function navigate(page, el) {
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   if (el && el.classList.contains('nav-item')) el.classList.add('active');
-  document.getElementById('topbarTitle').textContent = pageTitles[page] || page;
+  const tt = document.getElementById('topbarTitle');
+  tt.textContent = pageTitles[page] || page;
+  tt.classList.remove('tm-title-in'); void tt.offsetWidth; tt.classList.add('tm-title-in');
   // Sync mobile bottom nav active state
   const mobMap = {dashboard:'mob-dashboard',alltasks:'mob-alltasks','fms-tasks':'mob-fms-tasks',forms:'mob-forms',approvals:'mob-approvals',users:'mob-users',mis:'mob-mis',profile:'mob-profile',leaves:'mob-leaves',helpslip:'mob-helpslip'};
   document.querySelectorAll('.mob-nav-item').forEach(b=>b.classList.remove('active'));
@@ -4555,7 +4715,16 @@ async function api(url,method='GET',body=null,_retries=2) {
   return _apiRevalidate(url, _retries);
 }
 
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function closeModal(id) {
+  const m = document.getElementById(id);
+  // 'open' turant hatao (state sync rahe) — 'tm-closing' sirf exit animation ke liye
+  if (m.classList.contains('open')) {
+    m.classList.add('tm-closing');
+    clearTimeout(m._tmCloseT);
+    m._tmCloseT = setTimeout(() => m.classList.remove('tm-closing'), 240);
+  }
+  m.classList.remove('open');
+}
 
 // Modals sirf Cancel/Close button se band honge — bahar click se nahi
 // document.querySelectorAll('.modal-overlay').forEach(m=>{
@@ -4571,10 +4740,13 @@ async function logout() {
 function showToast(msg,type='success') {
   const t=document.createElement('div');
   const bg=type==='error'?'#dc2626':type==='warning'?'#d97706':'#1e293b';
-  t.style.cssText=`position:fixed;bottom:24px;right:24px;background:${bg};color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.2);animation:fadeIn .3s ease;max-width:320px`;
+  const life=type==='warning'?5000:3000;
+  t.className='tm-toast';
+  t.style.cssText=`position:fixed;bottom:24px;right:24px;background:${bg};color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.2);max-width:320px;overflow:hidden;--tm-life:${life}ms`;
   t.textContent=msg;
   document.body.appendChild(t);
-  setTimeout(()=>t.remove(),type==='warning'?5000:3000);
+  setTimeout(()=>t.classList.add('tm-out'),life-300);
+  setTimeout(()=>t.remove(),life);
 }
 
 // ══════════════════════════════════════════════════════
@@ -8018,6 +8190,123 @@ async function handleTransfer(id, action) {
 
 init();
 setDefaultMISDates();
+</script>
+<script>
+// ══════════════════════════════════════════════════════
+// ✨ MOTION — count-up numbers, click ripple, staggered entrances
+// prefers-reduced-motion ON ho toh sab skip hota hai
+// ══════════════════════════════════════════════════════
+(function () {
+  const RM = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const motionOK = () => !RM.matches;
+  const EASE = 'cubic-bezier(.22,1,.36,1)';
+
+  // ── Chart.js — bars/points ek ke baad ek grow hon ──
+  if (window.Chart) {
+    if (motionOK()) {
+      Chart.defaults.animation.duration = 1100;
+      Chart.defaults.animation.easing = 'easeOutQuart';
+      Chart.defaults.animation.delay = ctx =>
+        ctx.type === 'data' && ctx.mode === 'default' && ['bar', 'line'].includes(ctx.chart.config.type)
+          ? ctx.dataIndex * 60 + ctx.datasetIndex * 30 : 0;
+    } else {
+      Chart.defaults.animation.duration = 0;
+    }
+  }
+
+  // ── Count-up numbers (dashboard stat cards + owner tiles) ──
+  const NUM_SEL = '.ov-card .number, .ow-num';
+  const NUM_RE = /^(-?[\d,]*\d)(\.\d+)?(%?)$/;
+  function bump(el) { el.classList.remove('tm-bump'); void el.offsetWidth; el.classList.add('tm-bump'); }
+  function countUp(el) {
+    const raw = el.textContent.trim(), m = raw.match(NUM_RE), node = el.firstChild;
+    if (!m) { el._tmVal = undefined; return; }
+    const to = parseFloat((m[1] + (m[2] || '')).replace(/,/g, ''));
+    const from = el._tmVal ?? 0;
+    el._tmVal = to;
+    if (!motionOK() || from === to || !node || node.nodeType !== 3 || el.childNodes.length !== 1) return;
+    const dec = m[2] ? m[2].length - 1 : 0, comma = m[1].includes(',');
+    const fmt = v => (comma ? v.toLocaleString('en-IN', { minimumFractionDigits: dec, maximumFractionDigits: dec }) : v.toFixed(dec)) + m[3];
+    const t0 = performance.now(), dur = 900;
+    cancelAnimationFrame(el._tmRaf);
+    // nodeValue update characterData mutation hai — neeche wala observer use nahi sunta, loop nahi banega
+    const step = now => {
+      if (node.parentNode !== el) return;   // app ne beech me naya value daal diya
+      const p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 4);
+      node.nodeValue = p < 1 ? fmt(from + (to - from) * e) : raw;
+      if (p < 1) el._tmRaf = requestAnimationFrame(step); else bump(el);
+    };
+    node.nodeValue = fmt(from);
+    el._tmRaf = requestAnimationFrame(step);
+  }
+
+  // ── Naye render hue rows / cards ka staggered entrance ──
+  const ENTER_SEL = 'tbody > tr, .user-task-block, .fm-card, .ow-tile, .ow-ins, .holiday-item, .comment-item, .fms-step-box';
+  const lastEnter = new WeakMap();
+  const isTyping = () => {
+    const a = document.activeElement;
+    return !!a && (a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && /^(text|search|email|tel|number|url)$/i.test(a.type)));
+  };
+  function enter(target, els, now) {
+    // Cache revalidate jaisa turant dobara render → dobara animate mat karo (flicker hota)
+    if (now - (lastEnter.get(target) ?? -1e9) < 600) return;
+    lastEnter.set(target, now);
+    const set = new Set(els);
+    let i = 0;
+    for (const el of els) {
+      const outer = el.parentElement && el.parentElement.closest(ENTER_SEL);
+      if (outer && set.has(outer)) continue;   // parent card already animate ho raha hai
+      el.animate(
+        [{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }],
+        { duration: 420, delay: Math.min(i, 14) * 35, easing: EASE, fill: 'backwards' }
+      );
+      if (++i >= 36) break;   // neeche ke rows fold ke bahar hain — skip
+    }
+  }
+  new MutationObserver(recs => {
+    const groups = new Map();
+    for (const r of recs) {
+      for (const n of r.addedNodes) {
+        if (n.nodeType === 3) {
+          const p = n.parentElement;
+          if (p && p.matches(NUM_SEL)) countUp(p);
+          continue;
+        }
+        if (n.nodeType !== 1) continue;
+        if (n.matches(NUM_SEL)) countUp(n); else n.querySelectorAll(NUM_SEL).forEach(countUp);
+        let list = groups.get(r.target);
+        if (!list) groups.set(r.target, list = []);
+        if (n.matches(ENTER_SEL)) list.push(n);
+        else for (const e of n.querySelectorAll(ENTER_SEL)) list.push(e);
+      }
+    }
+    // Search box me type karte waqt har keystroke pe rows animate nahi karni
+    if (!motionOK() || isTyping()) return;
+    const now = performance.now();
+    groups.forEach((list, target) => {
+      if (list.length && !target.closest?.('.page:not(.active)')) enter(target, list, now);
+    });
+  }).observe(document.body, { childList: true, subtree: true });
+
+  // ── Click ripple ──
+  const RIPPLE_SEL = '.btn, .action-btn, .chip, .tab, .fms-done-btn, .fms-name-tab, .fms-step-tab, .ai-chip, .ai-fab, .mob-nav-item, .nav-item, .logout-btn';
+  document.addEventListener('pointerdown', e => {
+    if (!motionOK() || e.button !== 0) return;
+    const host = e.target.closest && e.target.closest(RIPPLE_SEL);
+    if (!host || host.disabled) return;
+    if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
+    const r = host.getBoundingClientRect(), size = Math.max(r.width, r.height) * 2.2;
+    const wrap = document.createElement('span'), dot = document.createElement('span');
+    wrap.className = 'tm-ripple-wrap'; dot.className = 'tm-ripple';
+    dot.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX - r.left}px;top:${e.clientY - r.top}px`;
+    wrap.appendChild(dot); host.appendChild(wrap);
+    setTimeout(() => wrap.remove(), 650);
+  }, { passive: true });
+  // Agar kisi code ne button ka innerHTML (ripple samet) copy karke restore kiya ho toh woh bhi saaf ho jaye
+  document.addEventListener('animationend', e => {
+    if (e.target.classList && e.target.classList.contains('tm-ripple')) e.target.parentElement.remove();
+  });
+})();
 </script>
 </body>
 </html>

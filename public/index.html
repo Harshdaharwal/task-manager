@@ -205,11 +205,100 @@
     from{opacity:0;transform:translateY(-15px);}
     to{opacity:1;transform:translateY(0);}
   }
+
+  /* ══════════════════════════════════════
+     ✨ MOTION — aurora, entrance, tilt, success
+  ══════════════════════════════════════ */
+  :root {
+    --ease-out: cubic-bezier(.22,1,.36,1);
+    --ease-spring: cubic-bezier(.34,1.56,.64,1);
+  }
+  .blob {position:fixed;border-radius:50%;filter:blur(70px);z-index:0;pointer-events:none;}
+  .blob.b1 {width:420px;height:420px;background:rgba(167,139,250,.45);top:-140px;left:-120px;}
+  .blob.b2 {width:380px;height:380px;background:rgba(129,140,248,.35);bottom:-140px;right:-100px;}
+  .blob.b3 {width:260px;height:260px;background:rgba(240,171,252,.3);top:45%;left:62%;}
+
+  .btn-login::after {
+    content:'';position:absolute;top:0;left:-60%;width:40%;height:100%;pointer-events:none;
+    background:linear-gradient(100deg,transparent,rgba(255,255,255,.45),transparent);
+    transform:skewX(-20deg);
+  }
+  .btn-login .arrow{display:inline-block;transition:transform .25s var(--ease-out);}
+  .btn-login:hover .arrow{transform:translateX(4px);}
+  .btn-login .btn-done{display:none;}
+  .btn-login.success,.btn-login.success:disabled {
+    opacity:1;background:linear-gradient(135deg,#22c55e 0%,#16a34a 100%);
+    box-shadow:0 8px 22px rgba(22,163,74,.35);
+  }
+  .btn-login.success .btn-text,.btn-login.success .spinner{display:none;}
+  .btn-login.success .btn-done{display:inline-block;}
+
+  @keyframes drift1{to{transform:translate(120px,90px) scale(1.15);}}
+  @keyframes drift2{to{transform:translate(-110px,-70px) scale(1.1);}}
+  @keyframes drift3{to{transform:translate(-160px,60px) scale(.85);}}
+  @keyframes rise{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:none;}}
+  @keyframes logoIn{from{opacity:0;transform:scale(.6) rotate(-8deg);}to{opacity:1;transform:none;}}
+  @keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-4px);}}
+  @keyframes shine{0%{transform:translateX(-120%);}35%,100%{transform:translateX(120%);}}
+  @keyframes dotWave{0%,60%,100%{transform:translateY(0);}30%{transform:translateY(-4px);}}
+  @keyframes wave{0%,60%,100%{transform:rotate(0);}10%,30%{transform:rotate(14deg);}20%{transform:rotate(-8deg);}40%{transform:rotate(-4deg);}50%{transform:rotate(10deg);}}
+  @keyframes barFlow{to{background-position:300% 0;}}
+  @keyframes shakeCard{0%,100%{transform:translateX(0);}15%,55%{transform:translateX(-8px);}35%,75%{transform:translateX(8px);}}
+  @keyframes leave{to{opacity:0;transform:translateY(-18px) scale(.96);}}
+  @keyframes pop{from{opacity:0;transform:scale(.5);}to{opacity:1;transform:none;}}
+
+  @media (prefers-reduced-motion:no-preference) {
+    .blob{will-change:transform;}
+    .blob.b1{animation:drift1 18s ease-in-out infinite alternate;}
+    .blob.b2{animation:drift2 22s ease-in-out infinite alternate;}
+    .blob.b3{animation:drift3 26s ease-in-out infinite alternate;}
+
+    /* Card ke andar sab ek-ek karke upar aaye */
+    .rise{animation:rise .6s var(--ease-out) calc(.18s + var(--d,0) * .07s) backwards;}
+
+    .brand-logo-banner{animation:logoIn .7s var(--ease-spring) .15s backwards, float 4.5s ease-in-out 1s infinite;}
+    .brand-logo-banner::after {
+      content:'';position:absolute;inset:0;pointer-events:none;
+      background:linear-gradient(110deg,transparent 35%,rgba(255,255,255,.8) 50%,transparent 65%);
+      transform:translateX(-120%);animation:shine 4s ease-in-out 1.2s infinite;
+    }
+    .logo-dots span{animation:dotWave 1.8s ease-in-out infinite;}
+    .logo-dots span:nth-child(2){animation-delay:.15s;}
+    .logo-dots span:nth-child(3){animation-delay:.3s;}
+    .wave{display:inline-block;transform-origin:70% 80%;animation:wave 2s ease-in-out .9s 2;}
+
+    .card-top-bar {
+      background:linear-gradient(90deg,#8b5cf6,#6d28d9,#2563eb,#8b5cf6);
+      background-size:300% 100%;animation:barFlow 6s linear infinite;
+    }
+    /* Mouse ke saath chalne wali soft spotlight */
+    .card::after {
+      content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+      background:radial-gradient(360px circle at var(--mx,50%) var(--my,0%),rgba(139,92,246,.09),transparent 45%);
+      opacity:0;transition:opacity .4s;
+    }
+    .card:hover::after{opacity:1;}
+    .wrap{transition:transform .3s var(--ease-out);}
+    .wrap.shake{animation:shakeCard .45s ease;}
+    .wrap.leaving{animation:leave .35s cubic-bezier(.55,0,.75,.2) forwards;}
+
+    .input-icon{transition:color .2s,transform .35s var(--ease-spring);}
+    .input-wrap:focus-within .input-icon{transform:translateY(-50%) scale(1.18);}
+    label{transition:color .2s,letter-spacing .3s var(--ease-out);}
+    .form-group:focus-within label{color:var(--accent-purple);letter-spacing:1.4px;}
+
+    .btn-login:hover::after{left:130%;transition:left .75s var(--ease-out);}
+    .btn-login:active{transform:scale(.98);}
+    .btn-login.success .btn-done{animation:pop .45s var(--ease-spring);}
+  }
 </style>
 </head>
 <body>
 
 <div class="bg-grid"></div>
+<div class="blob b1"></div>
+<div class="blob b2"></div>
+<div class="blob b3"></div>
 
 <div class="wrap">
 
@@ -218,7 +307,7 @@
     <div class="card-top-bar"></div>
 
     <!-- Brand Logo Section Inside Card -->
-    <div class="brand-logo-section">
+    <div class="brand-logo-section rise" style="--d:0">
       <div class="brand-logo-banner">
         <img src="/task-logo.svg" alt="Task Manager Logo"
              onerror="this.style.display='none';this.nextElementSibling.style.display='block'"/>
@@ -232,12 +321,12 @@
       </div>
     </div>
 
-    <div class="card-title">Welcome back 👋</div>
-    <div class="card-sub">Sign in to continue to your workspace</div>
+    <div class="card-title rise" style="--d:1">Welcome back <span class="wave">👋</span></div>
+    <div class="card-sub rise" style="--d:2">Sign in to continue to your workspace</div>
 
     <div class="error" id="err"></div>
 
-    <div class="form-group">
+    <div class="form-group rise" style="--d:3">
       <label for="email">Email Address</label>
       <div class="input-wrap">
         <span class="input-icon">✉</span>
@@ -245,7 +334,7 @@
       </div>
     </div>
 
-    <div class="form-group">
+    <div class="form-group rise" style="--d:4">
       <label for="password">Password</label>
       <div class="input-wrap">
         <span class="input-icon">🔒</span>
@@ -253,12 +342,13 @@
       </div>
     </div>
 
-    <button class="btn-login" id="loginBtn" onclick="login()">
-      <span class="btn-text">Sign In &rarr;</span>
+    <button class="btn-login rise" style="--d:5" id="loginBtn" onclick="login()">
+      <span class="btn-text">Sign In <span class="arrow">&rarr;</span></span>
       <div class="spinner"></div>
+      <span class="btn-done">✓ Welcome!</span>
     </button>
 
-    <div class="footer">
+    <div class="footer rise" style="--d:6">
       <strong>Task Manager</strong> &nbsp;·&nbsp; Secure Workspace
     </div>
   </div>
@@ -274,6 +364,29 @@
   } catch(e) {}
 })();
 
+// ── Motion: 3D tilt + spotlight (sirf mouse wale devices pe), shake on error ──
+const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const wrapEl = document.querySelector('.wrap');
+const cardEl = document.querySelector('.card');
+if (!REDUCED_MOTION && window.matchMedia('(hover:hover) and (pointer:fine)').matches) {
+  let raf = 0;
+  cardEl.addEventListener('pointermove', e => {
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(() => {
+      const r = cardEl.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+      cardEl.style.setProperty('--mx', (x * 100) + '%');
+      cardEl.style.setProperty('--my', (y * 100) + '%');
+      wrapEl.style.transform = `perspective(1000px) rotateX(${(0.5 - y) * 6}deg) rotateY(${(x - 0.5) * 6}deg)`;
+    });
+  });
+  cardEl.addEventListener('pointerleave', () => { cancelAnimationFrame(raf); wrapEl.style.transform = ''; });
+}
+function shakeCard(){
+  if (REDUCED_MOTION) return;
+  wrapEl.classList.remove('shake'); void wrapEl.offsetWidth; wrapEl.classList.add('shake');
+}
+
 async function login(){
   const email    = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
@@ -285,6 +398,7 @@ async function login(){
   if(!email || !password){
     err.textContent = 'Please fill all fields';
     err.style.display = 'block';
+    shakeCard();
     return;
   }
 
@@ -302,16 +416,23 @@ async function login(){
     if(!r.ok){
       err.textContent = d.error || 'Login failed';
       err.style.display = 'block';
+      shakeCard();
       btn.classList.remove('loading');
       btn.disabled = false;
       return;
     }
     // Token backup for cookie-blocked environments
     if(d.token) localStorage.setItem('authToken', d.token);
-    window.location.replace('/app');
+    if (REDUCED_MOTION) { window.location.replace('/app'); return; }
+    // Success: button green ✓, card upar fade — phir redirect
+    btn.classList.remove('loading');
+    btn.classList.add('success');
+    setTimeout(() => wrapEl.classList.add('leaving'), 200);
+    setTimeout(() => window.location.replace('/app'), 520);
   } catch(e) {
     err.textContent = 'Server error. Please try again.';
     err.style.display = 'block';
+    shakeCard();
     btn.classList.remove('loading');
     btn.disabled = false;
   }
