@@ -5,106 +5,130 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Task Manager — Sign In</title>
 <meta name="description" content="Sign in to Task Manager — task delegation and checklist platform."/>
+<meta name="theme-color" content="#07041a"/>
 <link rel="icon" type="image/svg+xml" href="/task-logo.svg"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet"/>
 <style>
   :root {
-    --bg-color: #f6f3fc;
-    --card-bg: #ffffff;
-    --text-primary: #241a3f;
-    --text-secondary: #6f6a7c;
-    --accent-purple: #8b5cf6;
-    --accent-purple-dark: #6d28d9;
-    --input-bg: #f7f4ff;
-    --input-border: #ddd6fe;
-    --input-focus: #6d28d9;
-    --label-color: #4c1d95;
+    --bg: #07041a;
+    --text-primary: #f5f3ff;
+    --text-secondary: #a5a1c2;
+    --accent: #a78bfa;
+    --label-color: #c4b5fd;
+    --ease-out: cubic-bezier(.22,1,.36,1);
+    --ease-spring: cubic-bezier(.34,1.56,.64,1);
   }
 
   *{margin:0;padding:0;box-sizing:border-box;}
 
   body {
     font-family:'Inter',sans-serif;
-    background: var(--bg-color);
-    background-image: 
-      radial-gradient(circle at top left, rgba(139, 92, 246, 0.08) 0%, transparent 40%),
-      radial-gradient(circle at bottom right, rgba(124, 58, 237, 0.05) 0%, transparent 50%);
+    background:var(--bg);
+    color:var(--text-primary);
     min-height:100vh;
     display:flex;align-items:center;justify-content:center;
     overflow:hidden;
     position:relative;
   }
 
-  /* Subtle background grid */
-  .bg-grid {
-    position:fixed;inset:0;z-index:0;pointer-events:none;
+  /* ══════════════════════════════════════
+     BACKGROUND — aurora night + stars + neon floor
+  ══════════════════════════════════════ */
+  .scene {
+    position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;
+    background:
+      radial-gradient(ellipse at 50% 120%, rgba(124,58,237,.35) 0%, transparent 60%),
+      radial-gradient(ellipse at 50% -20%, rgba(37,99,235,.16) 0%, transparent 55%),
+      var(--bg);
+  }
+  .blob {position:absolute;border-radius:50%;filter:blur(90px);}
+  .blob.b1 {width:520px;height:520px;background:rgba(124,58,237,.45);top:-180px;left:-160px;}
+  .blob.b2 {width:460px;height:460px;background:rgba(219,39,119,.26);bottom:-160px;right:-140px;}
+  .blob.b3 {width:340px;height:340px;background:rgba(37,99,235,.28);top:30%;left:58%;}
+  .star {position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;opacity:.45;}
+  .floor {
+    position:absolute;left:-50%;right:-50%;bottom:0;height:42vh;
+    perspective:320px;overflow:hidden;
+    -webkit-mask-image:linear-gradient(to top,#000 10%,transparent 90%);
+            mask-image:linear-gradient(to top,#000 10%,transparent 90%);
+  }
+  .floor-grid {
+    position:absolute;left:0;right:0;top:-100%;bottom:0;
+    transform-origin:center bottom;transform:rotateX(62deg);
     background-image:
-      linear-gradient(rgba(109, 40, 217, 0.015) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(109, 40, 217, 0.015) 1px, transparent 1px);
-    background-size:40px 40px;
+      linear-gradient(rgba(167,139,250,.32) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(167,139,250,.32) 1px, transparent 1px);
+    background-size:48px 48px;
   }
 
   .wrap {
     position:relative;z-index:10;
-    width:100%;max-width:360px;padding:16px;
+    width:100%;max-width:370px;padding:16px;
   }
 
-  /* ── CARD ── */
+  /* ── CARD — dark glass + ghoomta neon border ── */
+  @property --ang { syntax:'<angle>'; initial-value:0deg; inherits:false; }
   .card {
-    background: var(--card-bg);
-    border-radius:24px;
-    padding:36px 28px 32px;
-    box-shadow:
-      0 15px 35px rgba(109, 40, 217, 0.08),
-      0 5px 15px rgba(0, 0, 0, 0.04);
     position:relative;overflow:hidden;
-    animation:cardIn .65s cubic-bezier(.34,1.56,.64,1) both;
+    border-radius:24px;
+    padding:36px 28px 30px;
+    background:linear-gradient(160deg, rgba(40,24,88,.72) 0%, rgba(18,11,44,.82) 100%);
+    -webkit-backdrop-filter:blur(18px) saturate(140%);
+            backdrop-filter:blur(18px) saturate(140%);
+    border:1px solid rgba(167,139,250,.16);
+    box-shadow:
+      0 30px 80px rgba(0,0,0,.55),
+      0 0 70px rgba(124,58,237,.22),
+      inset 0 1px 0 rgba(255,255,255,.07);
+    transition:box-shadow .3s;
   }
-
-  /* Accent top bar */
-  .card-top-bar {
-    height:4px;
-    background:linear-gradient(90deg, var(--accent-purple) 0%, var(--accent-purple-dark) 100%);
-    position:absolute;top:0;left:0;right:0;
+  .card::before {
+    content:'';position:absolute;inset:0;border-radius:inherit;padding:1.5px;pointer-events:none;
+    background:conic-gradient(from var(--ang), transparent 0deg 220deg, #a78bfa 270deg, #f0abfc 310deg, #60a5fa 340deg, transparent 360deg);
+    -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;
+            mask-composite:exclude;
+  }
+  .wrap.shake .card {
+    box-shadow:
+      0 30px 80px rgba(0,0,0,.55),
+      0 0 70px rgba(239,68,68,.4),
+      inset 0 1px 0 rgba(255,255,255,.07);
   }
 
   /* ── BRAND LOGO INSIDE CARD ── */
-  .brand-logo-section {
-    text-align:center;margin-bottom:24px;
-  }
+  .brand-logo-section {text-align:center;margin-bottom:22px;}
   .brand-logo-banner {
-    width:96px;height:44px;border-radius:10px;margin:0 auto 10px;
+    width:96px;height:44px;border-radius:12px;margin:0 auto 12px;
     background:#ffffff;
-    display:grid;place-items:center;position:relative;
+    display:grid;place-items:center;position:relative;overflow:hidden;
     box-shadow:
-      0 0 0 1px rgba(139, 92, 246, 0.35),
-      0 4px 12px rgba(0,0,0,0.1);
-    overflow:hidden;
+      0 0 0 1px rgba(167,139,250,.55),
+      0 0 26px rgba(167,139,250,.45),
+      0 6px 16px rgba(0,0,0,.35);
   }
-  .brand-logo-banner img {
-    width:100%;height:100%;object-fit:contain;
-  }
+  .brand-logo-banner img {width:100%;height:100%;object-fit:contain;}
   .logo-sub {
     font-size:10px;font-weight:700;letter-spacing:3px;
-    color:var(--accent-purple-dark);text-transform:uppercase;
-    margin-bottom:6px;
+    color:var(--accent);text-transform:uppercase;
+    margin-bottom:7px;
   }
-  
-  /* Gold dots matching image layout */
-  .logo-dots {
-    display:flex;justify-content:center;gap:4px;margin-bottom:8px;
-  }
-  .logo-dots span {
-    width:5px;height:5px;border-radius:50%;
-    background:var(--accent-purple);
-  }
-  .logo-dots span:nth-child(2) { background: var(--accent-purple-dark); }
-  .logo-dots span:nth-child(3) { background: #2563eb; }
+  .logo-dots {display:flex;justify-content:center;gap:5px;margin-bottom:6px;}
+  .logo-dots span {width:5px;height:5px;border-radius:50%;background:#a78bfa;box-shadow:0 0 8px #a78bfa;}
+  .logo-dots span:nth-child(2) {background:#e879f9;box-shadow:0 0 8px #e879f9;}
+  .logo-dots span:nth-child(3) {background:#60a5fa;box-shadow:0 0 8px #60a5fa;}
 
   /* ── CARD HEADING ── */
   .card-title {
-    font-size:20px;font-weight:800;color:var(--text-primary);
-    margin-bottom:3px;text-align:center;letter-spacing:-0.3px;
+    font-family:'Outfit','Inter',sans-serif;
+    font-size:25px;font-weight:800;
+    margin-bottom:4px;text-align:center;letter-spacing:-.2px;
+  }
+  .card-title .grad {
+    background:linear-gradient(90deg,#fff 0%,#e9d5ff 35%,#f0abfc 50%,#e9d5ff 65%,#fff 100%);
+    background-size:200% auto;
+    -webkit-background-clip:text;background-clip:text;
+    -webkit-text-fill-color:transparent;color:transparent;
   }
   .card-sub {
     font-size:13px;color:var(--text-secondary);
@@ -113,44 +137,53 @@
 
   /* ── FORM ── */
   .form-group {margin-bottom:18px;}
-  
+
   label {
     display:block;font-size:10px;font-weight:700;letter-spacing:1px;
-    text-transform:uppercase;color:var(--label-color);margin-bottom:6px;
+    text-transform:uppercase;color:var(--label-color);margin-bottom:7px;
   }
-  
+
   .input-wrap {position:relative;}
-  
+
   .input-icon {
-    position:absolute;left:16px;top:50%;transform:translateY(-50%);
-    font-size:15px;color:#a78bfa;pointer-events:none;
+    position:absolute;left:15px;top:50%;transform:translateY(-50%);
+    font-size:15px;color:#8b7fc7;pointer-events:none;
     transition:color .2s;
   }
-  
+
   input {
     width:100%;
-    padding:12px 14px 12px 42px;
-    background:var(--input-bg);
-    border:1.5px solid var(--input-border);
+    padding:13px 14px 13px 42px;
+    background:rgba(255,255,255,.04);
+    border:1.5px solid rgba(167,139,250,.2);
     border-radius:12px;
     font-size:14px;font-family:'Inter',sans-serif;
     color:var(--text-primary);outline:none;
-    transition:all .25s ease;
+    transition:border-color .25s, background .25s, box-shadow .25s;
   }
-  input::placeholder{color:#a89fc0;}
+  input::placeholder {color:#6f6a8f;}
+  input:hover {border-color:rgba(167,139,250,.35);}
   input:focus {
-    border-color:var(--input-focus);
-    background:#ffffff;
-    box-shadow:0 0 0 3px rgba(124, 58, 237, 0.12);
+    border-color:var(--accent);
+    background:rgba(255,255,255,.07);
+    box-shadow:0 0 0 3px rgba(167,139,250,.16), 0 0 24px rgba(167,139,250,.22);
   }
-  input:focus ~ .input-icon,
-  .input-wrap:focus-within .input-icon { color:var(--accent-purple-dark); }
+  .input-wrap:focus-within .input-icon {color:var(--accent);}
+  /* Browser autofill ka peela/safed background dark theme me na aaye */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    -webkit-text-fill-color:var(--text-primary);
+    -webkit-box-shadow:0 0 0 1000px #1b1238 inset;
+    caret-color:var(--text-primary);
+    transition:background-color 9999s;
+  }
 
   /* ── ERROR ── */
   .error {
-    display:none;background:rgba(220,38,38,0.06);
-    border:1px solid rgba(220,38,38,0.2);
-    color:#b91c1c;padding:10px 14px;
+    display:none;background:rgba(239,68,68,.12);
+    border:1px solid rgba(248,113,113,.35);
+    color:#fca5a5;padding:10px 14px;
     border-radius:12px;font-size:13px;margin-bottom:14px;
     animation:shake .35s ease;text-align:center;
   }
@@ -162,22 +195,30 @@
 
   /* ── BUTTON ── */
   .btn-login {
-    width:100%;padding:13px;margin-top:6px;
-    background:linear-gradient(135deg, var(--accent-purple) 0%, var(--accent-purple-dark) 100%);
+    width:100%;padding:14px;margin-top:6px;
+    background:linear-gradient(110deg,#7c3aed 0%,#a855f7 50%,#db2777 100%);
+    background-size:200% 100%;background-position:0% 0;
     color:#ffffff;border:none;border-radius:12px;
     font-size:14px;font-weight:700;font-family:'Inter',sans-serif;
     cursor:pointer;position:relative;overflow:hidden;
-    transition:all .2s;
-    box-shadow:0 6px 18px rgba(124, 58, 237, 0.25);
+    box-shadow:0 10px 30px -8px rgba(168,85,247,.75), inset 0 1px 0 rgba(255,255,255,.22);
     letter-spacing:.3px;
+    transition:background-position .5s var(--ease-out), transform .2s, box-shadow .25s;
   }
   .btn-login:hover {
-    transform:translateY(-1.5px);
-    background:linear-gradient(135deg, #9d7bfa 0%, var(--accent-purple-dark) 100%);
-    box-shadow:0 8px 22px rgba(124, 58, 237, 0.35);
+    background-position:100% 0;
+    transform:translateY(-2px);
+    box-shadow:0 14px 36px -8px rgba(219,39,119,.65), inset 0 1px 0 rgba(255,255,255,.22);
   }
-  .btn-login:active{transform:translateY(0);}
-  .btn-login:disabled{opacity:.55;cursor:not-allowed;transform:none;}
+  .btn-login:active{transform:translateY(0) scale(.98);}
+  .btn-login:disabled{opacity:.6;cursor:not-allowed;transform:none;}
+  .btn-login::after {
+    content:'';position:absolute;top:0;left:-60%;width:40%;height:100%;pointer-events:none;
+    background:linear-gradient(100deg,transparent,rgba(255,255,255,.45),transparent);
+    transform:skewX(-20deg);
+  }
+  .btn-login .arrow{display:inline-block;transition:transform .25s var(--ease-out);}
+  .btn-login:hover .arrow{transform:translateX(4px);}
 
   /* Loading spinner inside button */
   .btn-login .spinner {
@@ -189,122 +230,152 @@
   @keyframes spin{to{transform:rotate(360deg);}}
   .btn-login.loading .btn-text{display:none;}
   .btn-login.loading .spinner{display:block;}
-
-  /* ── FOOTER ── */
-  .footer {
-    text-align:center;font-size:11px;color:var(--text-secondary);
-    margin-top:24px;letter-spacing:.3px;
-  }
-  .footer strong{color:var(--accent-purple-dark);}
-
-  @keyframes cardIn {
-    from{opacity:0;transform:translateY(24px) scale(.97);}
-    to{opacity:1;transform:translateY(0) scale(1);}
-  }
-  @keyframes fadeDown {
-    from{opacity:0;transform:translateY(-15px);}
-    to{opacity:1;transform:translateY(0);}
-  }
-
-  /* ══════════════════════════════════════
-     ✨ MOTION — aurora, entrance, tilt, success
-  ══════════════════════════════════════ */
-  :root {
-    --ease-out: cubic-bezier(.22,1,.36,1);
-    --ease-spring: cubic-bezier(.34,1.56,.64,1);
-  }
-  .blob {position:fixed;border-radius:50%;filter:blur(70px);z-index:0;pointer-events:none;}
-  .blob.b1 {width:420px;height:420px;background:rgba(167,139,250,.45);top:-140px;left:-120px;}
-  .blob.b2 {width:380px;height:380px;background:rgba(129,140,248,.35);bottom:-140px;right:-100px;}
-  .blob.b3 {width:260px;height:260px;background:rgba(240,171,252,.3);top:45%;left:62%;}
-
-  .btn-login::after {
-    content:'';position:absolute;top:0;left:-60%;width:40%;height:100%;pointer-events:none;
-    background:linear-gradient(100deg,transparent,rgba(255,255,255,.45),transparent);
-    transform:skewX(-20deg);
-  }
-  .btn-login .arrow{display:inline-block;transition:transform .25s var(--ease-out);}
-  .btn-login:hover .arrow{transform:translateX(4px);}
   .btn-login .btn-done{display:none;}
   .btn-login.success,.btn-login.success:disabled {
     opacity:1;background:linear-gradient(135deg,#22c55e 0%,#16a34a 100%);
-    box-shadow:0 8px 22px rgba(22,163,74,.35);
+    box-shadow:0 10px 30px -6px rgba(34,197,94,.6);
   }
   .btn-login.success .btn-text,.btn-login.success .spinner{display:none;}
   .btn-login.success .btn-done{display:inline-block;}
 
+  /* ── FOOTER ── */
+  .footer {
+    text-align:center;font-size:11px;color:#8b86a8;
+    margin-top:22px;letter-spacing:.3px;
+  }
+  .footer strong{color:var(--label-color);}
+
+  /* ══════════════════════════════════════
+     💥 BOOM — energy core, shockwave, flash, opening slit, sparks
+     (sirf motion-allowed pe dikhte hain)
+  ══════════════════════════════════════ */
+  .boom {position:fixed;inset:0;place-items:center;pointer-events:none;z-index:15;display:none;}
+  .core,.ring {grid-area:1/1;border-radius:50%;opacity:0;}
+  .core {width:90px;height:90px;background:radial-gradient(circle,#fff 0%,#e9d5ff 30%,#a78bfa 55%,rgba(124,58,237,0) 72%);}
+  .ring {width:140px;height:140px;border:2px solid #c4b5fd;box-shadow:0 0 18px #a78bfa, inset 0 0 18px #a78bfa;}
+  .ring.r2 {border-color:#f0abfc;box-shadow:0 0 18px #e879f9, inset 0 0 18px #e879f9;}
+  .ring.r3 {border-color:#93c5fd;box-shadow:0 0 18px #60a5fa, inset 0 0 18px #60a5fa;}
+  .flash {
+    position:fixed;inset:0;pointer-events:none;z-index:30;opacity:0;display:none;
+    background:radial-gradient(circle at 50% 50%, rgba(255,255,255,.95), rgba(196,181,253,.6) 35%, rgba(124,58,237,0) 70%);
+  }
+  /* Success pe poori screen roshni — app ke light background me ghul jaati hai */
+  .flash.go {background:radial-gradient(circle at var(--fx,50%) var(--fy,50%), #ffffff 0%, #ede9fe 35%, #f1f5f9 75%);}
+  .slit {
+    position:absolute;left:16px;right:16px;top:50%;height:3px;margin-top:-1.5px;
+    border-radius:3px;z-index:2;pointer-events:none;display:none;
+    background:linear-gradient(90deg,transparent,#c4b5fd 15%,#fff 50%,#f0abfc 85%,transparent);
+    box-shadow:0 0 18px 4px rgba(196,181,253,.8), 0 0 50px 10px rgba(167,139,250,.5);
+  }
+  .spark {
+    position:fixed;left:0;top:0;width:var(--s);height:var(--s);border-radius:50%;
+    background:var(--c);box-shadow:0 0 8px var(--c), 0 0 16px var(--c);
+    pointer-events:none;z-index:20;
+    animation:spark var(--dur) cubic-bezier(.1,.75,.3,1) var(--delay) both;
+  }
+
+  @keyframes coreCharge{0%{opacity:0;transform:scale(0);}40%{opacity:1;transform:scale(.85);}50%{opacity:1;transform:scale(.6);}58%{opacity:1;transform:scale(1.5);}100%{opacity:0;transform:scale(6);}}
+  @keyframes ringOut{0%{opacity:1;transform:scale(.2);}100%{opacity:0;transform:scale(9);}}
+  @keyframes flash{0%{opacity:0;}18%{opacity:.8;}100%{opacity:0;}}
+  @keyframes slit{0%{opacity:0;transform:scaleX(0);}8%{opacity:1;}40%{opacity:1;transform:scaleX(1);}100%{opacity:0;transform:scaleX(1) scaleY(6);}}
+  @keyframes boxOpen{0%{opacity:0;transform:scaleY(.012);filter:brightness(2.4);}12%{opacity:1;}100%{opacity:1;transform:none;filter:none;}}
+  @keyframes quake{0%,100%{transform:none;}12%{transform:translate(-7px,5px);}26%{transform:translate(6px,-6px);}40%{transform:translate(-5px,-3px);}55%{transform:translate(4px,4px);}70%{transform:translate(-2px,2px);}85%{transform:translate(1px,-1px);}}
+  @keyframes spark{0%{opacity:0;transform:translate(var(--x),var(--y)) translate(-50%,-50%) scale(1);}6%{opacity:1;}100%{opacity:0;transform:translate(calc(var(--x) + var(--tx)),calc(var(--y) + var(--ty))) translate(-50%,-50%) scale(.2);}}
   @keyframes drift1{to{transform:translate(120px,90px) scale(1.15);}}
   @keyframes drift2{to{transform:translate(-110px,-70px) scale(1.1);}}
   @keyframes drift3{to{transform:translate(-160px,60px) scale(.85);}}
+  @keyframes twinkle{0%,100%{opacity:.12;transform:scale(.6);}50%{opacity:.95;transform:scale(1.1);}}
+  @keyframes floorMove{from{transform:rotateX(62deg) translateY(0);}to{transform:rotateX(62deg) translateY(48px);}}
+  @keyframes spinAng{to{--ang:360deg;}}
   @keyframes rise{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:none;}}
-  @keyframes logoIn{from{opacity:0;transform:scale(.6) rotate(-8deg);}to{opacity:1;transform:none;}}
+  @keyframes logoIn{from{opacity:0;transform:scale(.4) rotate(-12deg);}to{opacity:1;transform:none;}}
   @keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-4px);}}
   @keyframes shine{0%{transform:translateX(-120%);}35%,100%{transform:translateX(120%);}}
   @keyframes dotWave{0%,60%,100%{transform:translateY(0);}30%{transform:translateY(-4px);}}
+  @keyframes textShine{to{background-position:-200% center;}}
   @keyframes wave{0%,60%,100%{transform:rotate(0);}10%,30%{transform:rotate(14deg);}20%{transform:rotate(-8deg);}40%{transform:rotate(-4deg);}50%{transform:rotate(10deg);}}
-  @keyframes barFlow{to{background-position:300% 0;}}
-  @keyframes shakeCard{0%,100%{transform:translateX(0);}15%,55%{transform:translateX(-8px);}35%,75%{transform:translateX(8px);}}
-  @keyframes leave{to{opacity:0;transform:translateY(-18px) scale(.96);}}
+  @keyframes shakeCard{0%,100%{transform:translateX(0);}15%,55%{transform:translateX(-9px);}35%,75%{transform:translateX(9px);}}
+  @keyframes warp{to{opacity:0;transform:scale(1.18);filter:blur(10px) brightness(1.6);}}
+  @keyframes flashGo{from{opacity:0;}to{opacity:1;}}
   @keyframes pop{from{opacity:0;transform:scale(.5);}to{opacity:1;transform:none;}}
 
   @media (prefers-reduced-motion:no-preference) {
+    /* Intro timeline: 0–.45s core charge → .45s BOOM (flash + rings + sparks + shake)
+       → .42s slit khulti hai → .66s box khulta hai → .95s+ content ek-ek karke */
+    .boom{display:grid;}
+    .core{animation:coreCharge .85s ease-in-out forwards;}
+    .ring{animation:ringOut 1s cubic-bezier(.15,.7,.3,1) .46s forwards;}
+    .ring.r2{animation-delay:.53s;}
+    .ring.r3{animation-delay:.6s;}
+    .flash{display:block;animation:flash .7s ease-out .45s;}
+    .scene{animation:quake .5s ease-out .45s;}
+    .slit{display:block;animation:slit .75s var(--ease-out) .42s both;}
+    .card{animation:boxOpen .65s cubic-bezier(.2,1.3,.4,1) .66s both;}
+    .card::before{animation:spinAng 5s linear infinite;}
+
     .blob{will-change:transform;}
     .blob.b1{animation:drift1 18s ease-in-out infinite alternate;}
     .blob.b2{animation:drift2 22s ease-in-out infinite alternate;}
     .blob.b3{animation:drift3 26s ease-in-out infinite alternate;}
+    .star{animation:twinkle var(--tw,3s) ease-in-out var(--td,0s) infinite;}
+    .floor-grid{animation:floorMove 2.6s linear infinite;}
 
-    /* Card ke andar sab ek-ek karke upar aaye */
-    .rise{animation:rise .6s var(--ease-out) calc(.18s + var(--d,0) * .07s) backwards;}
-
-    .brand-logo-banner{animation:logoIn .7s var(--ease-spring) .15s backwards, float 4.5s ease-in-out 1s infinite;}
+    .rise{animation:rise .6s var(--ease-out) calc(.95s + var(--d,0) * .07s) backwards;}
+    .brand-logo-banner{animation:logoIn .8s var(--ease-spring) .9s backwards, float 4.5s ease-in-out 1.8s infinite;}
     .brand-logo-banner::after {
       content:'';position:absolute;inset:0;pointer-events:none;
       background:linear-gradient(110deg,transparent 35%,rgba(255,255,255,.8) 50%,transparent 65%);
-      transform:translateX(-120%);animation:shine 4s ease-in-out 1.2s infinite;
+      transform:translateX(-120%);animation:shine 4s ease-in-out 2s infinite;
     }
-    .logo-dots span{animation:dotWave 1.8s ease-in-out infinite;}
-    .logo-dots span:nth-child(2){animation-delay:.15s;}
-    .logo-dots span:nth-child(3){animation-delay:.3s;}
-    .wave{display:inline-block;transform-origin:70% 80%;animation:wave 2s ease-in-out .9s 2;}
+    .logo-dots span{animation:dotWave 1.8s ease-in-out 1.2s infinite;}
+    .logo-dots span:nth-child(2){animation-delay:1.35s;}
+    .logo-dots span:nth-child(3){animation-delay:1.5s;}
+    .card-title .grad{animation:textShine 5s linear 1.5s infinite;}
+    .wave{display:inline-block;transform-origin:70% 80%;animation:wave 2s ease-in-out 1.6s 2;}
 
-    .card-top-bar {
-      background:linear-gradient(90deg,#8b5cf6,#6d28d9,#2563eb,#8b5cf6);
-      background-size:300% 100%;animation:barFlow 6s linear infinite;
-    }
-    /* Mouse ke saath chalne wali soft spotlight */
+    /* Mouse ke saath chalne wali spotlight */
     .card::after {
       content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
-      background:radial-gradient(360px circle at var(--mx,50%) var(--my,0%),rgba(139,92,246,.09),transparent 45%);
+      background:radial-gradient(360px circle at var(--mx,50%) var(--my,0%), rgba(167,139,250,.14), transparent 45%);
       opacity:0;transition:opacity .4s;
     }
     .card:hover::after{opacity:1;}
     .wrap{transition:transform .3s var(--ease-out);}
     .wrap.shake{animation:shakeCard .45s ease;}
-    .wrap.leaving{animation:leave .35s cubic-bezier(.55,0,.75,.2) forwards;}
+    .wrap.leaving{animation:warp .5s cubic-bezier(.55,0,.75,.2) forwards;}
+    .flash.go{display:block;animation:flashGo .5s ease-in forwards;}
 
     .input-icon{transition:color .2s,transform .35s var(--ease-spring);}
     .input-wrap:focus-within .input-icon{transform:translateY(-50%) scale(1.18);}
     label{transition:color .2s,letter-spacing .3s var(--ease-out);}
-    .form-group:focus-within label{color:var(--accent-purple);letter-spacing:1.4px;}
+    .form-group:focus-within label{color:#e9d5ff;letter-spacing:1.4px;}
 
     .btn-login:hover::after{left:130%;transition:left .75s var(--ease-out);}
-    .btn-login:active{transform:scale(.98);}
     .btn-login.success .btn-done{animation:pop .45s var(--ease-spring);}
   }
 </style>
 </head>
 <body>
 
-<div class="bg-grid"></div>
-<div class="blob b1"></div>
-<div class="blob b2"></div>
-<div class="blob b3"></div>
+<div class="scene" aria-hidden="true">
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+  <div class="blob b3"></div>
+  <div class="floor"><div class="floor-grid"></div></div>
+</div>
+
+<div class="boom" aria-hidden="true">
+  <div class="core"></div>
+  <div class="ring r1"></div>
+  <div class="ring r2"></div>
+  <div class="ring r3"></div>
+</div>
 
 <div class="wrap">
+  <div class="slit" aria-hidden="true"></div>
 
   <!-- Card -->
   <div class="card">
-    <div class="card-top-bar"></div>
 
     <!-- Brand Logo Section Inside Card -->
     <div class="brand-logo-section rise" style="--d:0">
@@ -321,7 +392,7 @@
       </div>
     </div>
 
-    <div class="card-title rise" style="--d:1">Welcome back <span class="wave">👋</span></div>
+    <div class="card-title rise" style="--d:1"><span class="grad">Welcome back</span> <span class="wave">👋</span></div>
     <div class="card-sub rise" style="--d:2">Sign in to continue to your workspace</div>
 
     <div class="error" id="err"></div>
@@ -355,6 +426,8 @@
 
 </div>
 
+<div class="flash" aria-hidden="true"></div>
+
 <script>
 // Agar already logged in hai toh seedha /app pe bhejo
 (async function checkExistingSession() {
@@ -364,10 +437,46 @@
   } catch(e) {}
 })();
 
-// ── Motion: 3D tilt + spotlight (sirf mouse wale devices pe), shake on error ──
+// ── Motion: stars, boom sparks, 3D tilt + spotlight, shake on error ──
 const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const wrapEl = document.querySelector('.wrap');
-const cardEl = document.querySelector('.card');
+const wrapEl  = document.querySelector('.wrap');
+const cardEl  = document.querySelector('.card');
+const sceneEl = document.querySelector('.scene');
+const flashEl = document.querySelector('.flash');
+
+// Taare — reduced motion me bhi dikhte hain, bas twinkle nahi karte
+(function makeStars() {
+  const n = window.innerWidth < 600 ? 35 : 70, frag = document.createDocumentFragment();
+  for (let i = 0; i < n; i++) {
+    const s = document.createElement('span'), size = Math.random() < .15 ? 3 : 2;
+    s.className = 'star';
+    s.style.cssText = `left:${Math.random() * 100}%;top:${Math.random() * 75}%;width:${size}px;height:${size}px;` +
+      `--tw:${(2 + Math.random() * 3).toFixed(2)}s;--td:${(-Math.random() * 5).toFixed(2)}s`;
+    frag.appendChild(s);
+  }
+  sceneEl.appendChild(frag);
+})();
+
+// Chingari ka dhamaka (x, y) se chaaron taraf
+const SPARK_COLORS = ['#c4b5fd', '#f0abfc', '#93c5fd', '#ffffff', '#a78bfa'];
+function burst(x, y, { count = 28, spread = 260, delay = 0, colors = SPARK_COLORS } = {}) {
+  if (REDUCED_MOTION) return;
+  const frag = document.createDocumentFragment();
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement('span');
+    const a = (i / count) * Math.PI * 2 + Math.random() * .4, d = spread * (.45 + Math.random() * .75);
+    p.className = 'spark';
+    p.style.cssText = `--x:${x}px;--y:${y}px;--tx:${(Math.cos(a) * d).toFixed(1)}px;--ty:${(Math.sin(a) * d).toFixed(1)}px;` +
+      `--c:${colors[i % colors.length]};--s:${(3 + Math.random() * 4).toFixed(1)}px;` +
+      `--dur:${(.7 + Math.random() * .5).toFixed(2)}s;--delay:${delay}s`;
+    p.addEventListener('animationend', () => p.remove());
+    frag.appendChild(p);
+  }
+  document.body.appendChild(frag);
+}
+// Intro BOOM — CSS timeline ke .45s wale dhamake ke saath
+burst(window.innerWidth / 2, window.innerHeight / 2, { count: 36, spread: Math.max(window.innerWidth, window.innerHeight) * .45, delay: .46 });
+
 if (!REDUCED_MOTION && window.matchMedia('(hover:hover) and (pointer:fine)').matches) {
   let raf = 0;
   cardEl.addEventListener('pointermove', e => {
@@ -386,6 +495,10 @@ function shakeCard(){
   if (REDUCED_MOTION) return;
   wrapEl.classList.remove('shake'); void wrapEl.offsetWidth; wrapEl.classList.add('shake');
 }
+// Shake khatam → laal glow bhi wapas normal
+wrapEl.addEventListener('animationend', e => {
+  if (e.target === wrapEl && e.animationName === 'shakeCard') wrapEl.classList.remove('shake');
+});
 
 async function login(){
   const email    = document.getElementById('email').value.trim();
@@ -424,11 +537,15 @@ async function login(){
     // Token backup for cookie-blocked environments
     if(d.token) localStorage.setItem('authToken', d.token);
     if (REDUCED_MOTION) { window.location.replace('/app'); return; }
-    // Success: button green ✓, card upar fade — phir redirect
+    // Success: button green ✓ + sparks → card warp + roshni → app
     btn.classList.remove('loading');
     btn.classList.add('success');
-    setTimeout(() => wrapEl.classList.add('leaving'), 200);
-    setTimeout(() => window.location.replace('/app'), 520);
+    const b = btn.getBoundingClientRect(), bx = b.left + b.width / 2, by = b.top + b.height / 2;
+    burst(bx, by, { count: 22, spread: 170, colors: ['#4ade80', '#86efac', '#ffffff', '#c4b5fd'] });
+    flashEl.style.setProperty('--fx', bx + 'px');
+    flashEl.style.setProperty('--fy', by + 'px');
+    setTimeout(() => { wrapEl.classList.add('leaving'); flashEl.classList.add('go'); }, 220);
+    setTimeout(() => window.location.replace('/app'), 700);
   } catch(e) {
     err.textContent = 'Server error. Please try again.';
     err.style.display = 'block';
