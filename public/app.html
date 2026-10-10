@@ -305,6 +305,99 @@ tbody tr:last-child td{border-bottom:none;}
 .ow-filter:focus{border-color:#7c3aed;}
 @media (max-width:760px){#ownChartsRow{grid-template-columns:1fr !important;}}
 
+/* ══ WHATSAPP CAMPAIGN ══ */
+.cp-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:16px;align-items:start;}
+.cp-col{display:flex;flex-direction:column;gap:16px;min-width:0;}
+.cp-card{background:#fff;border-radius:16px;padding:18px;box-shadow:0 4px 20px rgba(0,0,0,.07);position:relative;}
+.cp-step{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:800;color:#1e293b;margin-bottom:14px;}
+.cp-pill{margin-left:auto;background:#f5f3ff;color:#6d28d9;border:1px solid #ede9fe;border-radius:20px;padding:2px 10px;font-size:11.5px;font-weight:700;}
+.cp-limits{display:flex;gap:8px;flex-wrap:wrap;}
+.cp-limits span{background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:5px 12px;font-size:12px;color:#475569;font-weight:600;}
+.cp-hint{font-size:11.5px;color:#94a3b8;line-height:1.5;}
+.cp-count{font-weight:700;color:#94a3b8;text-transform:none;letter-spacing:0;font-size:11px;}
+.cp-count.over{color:#dc2626;}
+.cp-toolbar{display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;}
+.cp-toolbar button{border:1.5px solid #e2e8f0;background:#fff;border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer;color:#475569;font-family:'Inter',sans-serif;transition:all .15s;}
+.cp-toolbar button:hover{border-color:#a78bfa;color:#6d28d9;background:#faf5ff;}
+.cp-msg{resize:vertical;min-height:120px;line-height:1.5;}
+.cp-attach-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.cp-attach{display:flex;flex-direction:column;align-items:center;gap:3px;padding:14px 10px;border:2px dashed #c4b5fd;border-radius:12px;background:#faf5ff;cursor:pointer;font-family:'Inter',sans-serif;color:#6d28d9;transition:all .2s;}
+.cp-attach span{font-size:22px;line-height:1;}
+.cp-attach b{font-size:13px;}
+.cp-attach small{font-size:10.5px;color:#94a3b8;}
+.cp-attach:hover{border-color:#7c3aed;background:#f3e8ff;transform:translateY(-2px);}
+.cp-media{display:flex;align-items:center;gap:12px;margin-top:12px;padding:10px 12px;border:1.5px solid #ede9fe;border-radius:12px;background:#fff;}
+.cp-media img,.cp-media .cp-pdf-ico{width:52px;height:52px;border-radius:8px;flex-shrink:0;}
+.cp-media img{object-fit:cover;}
+.cp-media .cp-pdf-ico{display:grid;place-items:center;background:#fef2f2;font-size:24px;}
+.cp-media-info{flex:1;min-width:0;}
+.cp-media-info b{display:block;font-size:13px;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cp-media-x{border:none;background:#fef2f2;color:#dc2626;border-radius:8px;width:30px;height:30px;cursor:pointer;flex-shrink:0;}
+.cp-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;}
+.cp-numlist{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;max-height:230px;overflow-y:auto;padding:2px;}
+.cp-chip{display:inline-flex;align-items:center;gap:6px;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;border-radius:20px;padding:4px 5px 4px 11px;font-size:12px;font-weight:600;}
+.cp-chip small{color:#4d7c0f;font-weight:500;}
+.cp-chip button{border:none;background:rgba(22,101,52,.1);color:#166534;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;line-height:1;}
+.cp-chip button:hover{background:#dc2626;color:#fff;}
+/* WhatsApp-style phone preview */
+.cp-phone{border-radius:22px;overflow:hidden;border:7px solid #1e293b;box-shadow:0 18px 40px rgba(15,23,42,.22);background:#efeae2;max-width:340px;margin:0 auto;}
+.cp-phone-top{display:flex;align-items:center;gap:10px;background:#075e54;color:#fff;padding:10px 12px;}
+.cp-ava{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#a78bfa);display:grid;place-items:center;font-size:11px;font-weight:800;flex-shrink:0;}
+.cp-phone-top b{font-size:13px;display:block;}
+.cp-phone-top small{font-size:10.5px;opacity:.8;}
+.cp-chat{min-height:280px;padding:14px 10px;background-color:#efeae2;background-image:radial-gradient(rgba(0,0,0,.04) 1px,transparent 1px);background-size:14px 14px;display:flex;flex-direction:column;justify-content:flex-end;}
+.cp-bubble{align-self:flex-end;max-width:88%;min-width:90px;background:#d9fdd3;border-radius:10px 2px 10px 10px;padding:4px 4px 5px;box-shadow:0 1px 1px rgba(0,0,0,.12);font-size:13px;line-height:1.45;color:#111b21;overflow-wrap:anywhere;}
+.cp-bubble img{display:block;width:100%;max-height:260px;object-fit:cover;border-radius:7px;margin-bottom:3px;}
+.cp-bubble .cp-doc{display:flex;align-items:center;gap:9px;background:rgba(0,0,0,.05);border-radius:7px;padding:9px;margin-bottom:3px;font-size:12px;}
+.cp-bubble .cp-doc span{font-size:26px;}
+.cp-bubble .cp-doc small{display:block;color:#667781;font-size:10.5px;}
+.cp-bubble .cp-txt{padding:2px 6px;}
+.cp-bubble .cp-time{font-size:10px;color:#667781;text-align:right;padding:0 6px;}
+.cp-bubble .cp-time b{color:#53bdeb;}
+.cp-bubble code{background:rgba(0,0,0,.06);padding:0 3px;border-radius:3px;font-size:12px;}
+.cp-bubble .cp-name{background:#fef9c3;border-radius:3px;padding:0 2px;}
+.cp-bubble.empty{align-self:center;background:#fff;color:#94a3b8;font-style:italic;border-radius:10px;padding:8px 12px;min-width:0;}
+.cp-summary{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:16px 0 12px;}
+.cp-summary > div{background:#f8fafc;border:1px solid #eef2f7;border-radius:10px;padding:8px 10px;font-size:11px;color:#64748b;font-weight:600;}
+.cp-summary b{display:block;font-size:15px;color:#1e293b;}
+.cp-summary .cp-warn{grid-column:1/-1;background:#fffbeb;border-color:#fde68a;color:#92400e;font-weight:500;line-height:1.5;}
+.cp-send{width:100%;justify-content:center;padding:12px;font-size:14px;border-radius:12px;}
+/* Live progress */
+.cp-live{margin-bottom:16px;border:1.5px solid #ddd6fe;}
+.cp-live.running{border-color:#86efac;box-shadow:0 8px 30px rgba(34,197,94,.15);}
+.cp-live-head{display:flex;align-items:center;gap:14px;margin-bottom:12px;}
+.cp-live-title{font-size:15px;font-weight:800;color:#1e293b;}
+.cp-ring{position:relative;width:64px;height:64px;flex-shrink:0;}
+.cp-ring svg{transform:rotate(-90deg);display:block;}
+.cp-ring circle{fill:none;stroke-width:6;}
+.cp-ring .bg{stroke:#ede9fe;}
+.cp-ring .fg{stroke:#7c3aed;stroke-linecap:round;transition:stroke-dashoffset 1s linear;}
+.cp-ring span{position:absolute;inset:0;display:grid;place-items:center;font-size:12.5px;font-weight:800;color:#6d28d9;}
+.cp-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0;}
+.cp-stats > div{background:#f8fafc;border-radius:10px;padding:8px 10px;}
+.cp-stats .ow-num{font-size:20px;}
+.cp-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.cp-err{background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;border-radius:10px;padding:9px 12px;font-size:12.5px;margin-top:10px;line-height:1.5;}
+.cp-info{background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:10px;padding:9px 12px;font-size:12.5px;margin-top:10px;line-height:1.5;}
+.cp-log{max-height:300px;overflow:auto;margin-top:12px;border:1px solid #eef2f7;border-radius:10px;}
+.cp-log .ow-tbl th{position:sticky;top:0;background:#fff;z-index:1;}
+.cp-st{font-size:11px;font-weight:700;padding:2px 9px;border-radius:12px;white-space:nowrap;display:inline-block;}
+.cp-st.p{background:#f1f5f9;color:#64748b;}
+.cp-st.s{background:#dcfce7;color:#15803d;}
+.cp-st.f{background:#fee2e2;color:#b91c1c;}
+.cp-st.now{background:#ede9fe;color:#6d28d9;}
+.cp-nav-dot{display:none;position:absolute;top:8px;left:28px;width:8px;height:8px;border-radius:50%;background:#22c55e;}
+.mob-nav-item .cp-nav-dot{top:6px;left:auto;right:calc(50% - 14px);}
+.cp-on .cp-nav-dot{display:block;}
+@keyframes cpPulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.6);}70%,100%{box-shadow:0 0 0 8px rgba(34,197,94,0);}}
+@media (prefers-reduced-motion:no-preference){
+  .cp-on .cp-nav-dot,.cp-live.running .cp-st.now{animation:cpPulse 1.6s infinite;}
+}
+@media (max-width:900px){
+  .cp-grid{grid-template-columns:1fr;}
+  .cp-stats{grid-template-columns:repeat(2,1fr);}
+}
+
 /* ══ AI ASSISTANT ══ */
 .ai-fab{position:fixed;right:22px;bottom:22px;width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:#fff;font-size:24px;display:grid;place-items:center;cursor:pointer;box-shadow:0 8px 24px rgba(124,58,237,.45);z-index:900;transition:transform .2s;border:none;}
 .ai-fab:hover{transform:scale(1.1);}
@@ -877,6 +970,11 @@ button:disabled{opacity:.65;cursor:not-allowed !important;}
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
       <span class="mob-nav-label">Users</span>
     </button>
+    <button class="mob-nav-item" id="mob-campaign" style="display:none" onclick="navigate('campaign',this);setMobActive(this)">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+      <span class="mob-nav-label">Campaign</span>
+      <span class="cp-nav-dot"></span>
+    </button>
     <button class="mob-nav-item" id="mob-mis" style="display:none" onclick="navigate('mis',this);setMobActive(this)">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
       <span class="mob-nav-label">MIS</span>
@@ -946,6 +1044,11 @@ button:disabled{opacity:.65;cursor:not-allowed !important;}
     <div class="nav-item" id="nav-catalogs" onclick="navigate('catalogs',this)">
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
       <span class="nav-label-text">Catalogues</span>
+    </div>
+    <div class="nav-item" id="nav-campaign" style="display:none" onclick="navigate('campaign',this)">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+      <span class="nav-label-text">WhatsApp Campaign</span>
+      <span class="cp-nav-dot"></span>
     </div>
     <div class="nav-item" id="nav-ai" onclick="aiToggle()" style="background:linear-gradient(90deg,rgba(124,58,237,.18),transparent);border:1px solid rgba(167,139,250,.25)">
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
@@ -1519,6 +1622,98 @@ button:disabled{opacity:.65;cursor:not-allowed !important;}
       <div style="width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,#f5f3ff,#ede9fe);display:grid;place-items:center;font-size:30px;margin:0 auto 14px">📚</div>
       <div style="font-size:15px;font-weight:800;color:#1e293b">No catalogues yet</div>
       <div style="font-size:12.5px;color:#64748b;margin-top:5px">Click "➕ Upload Catalogue" to add a name + PDF.</div>
+    </div>
+  </div>
+
+  <!-- ── WHATSAPP CAMPAIGN (admin) ── -->
+  <div id="page-campaign" class="page">
+    <div class="page-header">
+      <h2>📣 WhatsApp Campaign</h2>
+      <div class="cp-limits">
+        <span>⏱ <b id="cpGapLbl">55</b> sec gap</span>
+        <span title="Waumfy plan limits">📊 30 / ghanta · 200 / din</span>
+      </div>
+    </div>
+
+    <!-- Live progress — chal raha / ruka hua campaign -->
+    <div id="cpLive" class="cp-card cp-live" style="display:none"></div>
+
+    <div class="cp-grid">
+      <div class="cp-col">
+        <!-- 1 · Template -->
+        <div class="cp-card">
+          <div class="cp-step"><span class="fm-step-badge">1</span> Message Template</div>
+          <div class="form-group">
+            <label>Campaign Name</label>
+            <input class="fm-input" type="text" id="cpName" maxlength="120" placeholder="e.g. Diwali Offer 2026"/>
+          </div>
+          <div class="form-group">
+            <label style="display:flex;justify-content:space-between;align-items:center">Message <span id="cpCount" class="cp-count">0 / 4096</span></label>
+            <div class="cp-toolbar">
+              <button type="button" onclick="cpWrap('*')" title="Bold"><b>B</b></button>
+              <button type="button" onclick="cpWrap('_')" title="Italic"><i>I</i></button>
+              <button type="button" onclick="cpWrap('~')" title="Strike"><s>S</s></button>
+              <button type="button" onclick="cpInsert('{{name}}')" title="Har number ka naam (agar list me diya ho)">👤 {{name}}</button>
+            </div>
+            <textarea class="fm-input cp-msg" id="cpMsg" rows="6" oninput="cpRenderPreview()"
+              placeholder="Namaste {{name}} 👋&#10;Hamara naya offer aa gaya hai…"></textarea>
+          </div>
+          <div class="cp-attach-btns">
+            <button type="button" class="cp-attach" onclick="document.getElementById('cpImgFile').click()">
+              <span>🖼️</span><b>Image</b><small>JPG · PNG · WEBP · max 5MB</small>
+            </button>
+            <button type="button" class="cp-attach" onclick="document.getElementById('cpPdfFile').click()">
+              <span>📄</span><b>PDF</b><small>max 15MB</small>
+            </button>
+            <input type="file" id="cpImgFile" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="cpPickMedia(this,'image')"/>
+            <input type="file" id="cpPdfFile" accept="application/pdf,.pdf" style="display:none" onchange="cpPickMedia(this,'pdf')"/>
+          </div>
+          <div id="cpMediaBox"></div>
+        </div>
+
+        <!-- 2 · Numbers -->
+        <div class="cp-card">
+          <div class="cp-step"><span class="fm-step-badge">2</span> Numbers <span id="cpNumCount" class="cp-pill">0</span></div>
+          <textarea class="fm-input" id="cpNumInput" rows="4"
+            placeholder="Ek line me ek number — chaho toh comma ke baad naam:&#10;9876543210&#10;9876543211, Rahul"></textarea>
+          <div class="cp-row">
+            <button class="btn btn-primary btn-sm" onclick="cpAddNumbers()">➕ List me daalo</button>
+            <button class="btn btn-outline btn-sm" onclick="document.getElementById('cpCsvFile').click()">📥 CSV / TXT</button>
+            <button class="btn btn-outline btn-sm" onclick="cpClearNumbers()">🗑 Clear</button>
+            <input type="file" id="cpCsvFile" accept=".csv,.txt,text/csv,text/plain" style="display:none" onchange="cpImportFile(this)"/>
+          </div>
+          <div id="cpNumMsg" class="cp-hint" style="margin-top:8px"></div>
+          <div id="cpNumList" class="cp-numlist"></div>
+        </div>
+      </div>
+
+      <div class="cp-col">
+        <!-- 3 · Preview + Send -->
+        <div class="cp-card">
+          <div class="cp-step"><span class="fm-step-badge">3</span> Preview &amp; Send</div>
+          <div class="cp-phone">
+            <div class="cp-phone-top">
+              <span class="cp-ava">TM</span>
+              <div><b>Your Business</b><small>online</small></div>
+            </div>
+            <div class="cp-chat"><div id="cpBubble" class="cp-bubble"></div></div>
+          </div>
+          <div id="cpSummary" class="cp-summary"></div>
+          <button class="btn btn-green cp-send" id="cpSendBtn" onclick="cpStart()">🚀 Send Campaign</button>
+          <div class="cp-hint" style="text-align:center;margin-top:8px">Sending ke dauraan ye tab khula rakho — band karoge toh ruk jayegi, wapas aakar Resume kar sakte ho</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="cp-card" style="margin-top:16px">
+      <div class="cp-step">🗂 Campaign History <span id="cpHistCount" class="cp-pill">0</span></div>
+      <div class="ow-scroll">
+        <table class="ow-tbl">
+          <thead><tr><th>Campaign</th><th>Created</th><th>Progress</th><th>Status</th><th></th></tr></thead>
+          <tbody id="cpHistBody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -2713,9 +2908,11 @@ async function init() {
       document.getElementById('nav-users').style.display = 'flex';
       document.getElementById('nav-fms').style.display = 'flex'; // FMS Admin (admin only)
       document.getElementById('nav-owner').style.display = 'flex'; // Owner Dashboard (admin only)
+      document.getElementById('nav-campaign').style.display = 'flex'; // WhatsApp Campaign (admin only)
       document.getElementById('bulkDeleteBtn').style.display = 'inline-flex';
       // Mobile nav
       document.getElementById('mob-users').style.display = 'flex';
+      document.getElementById('mob-campaign').style.display = 'flex';
     }
     // FMS Tasks — sab users ko dikhta hai
     document.getElementById('nav-fms-tasks').style.display = 'flex';
@@ -2804,7 +3001,7 @@ function setMinDates() {
 // ══════════════════════════════════════════════════════
 // NAVIGATION
 // ══════════════════════════════════════════════════════
-const pageTitles = {dashboard:'Dashboard',owner:'Owner Dashboard',alltasks:'All Tasks',approvals:'Approvals',users:'Users',profile:'Profile',mis:'MIS Report',fms:'FMS Admin','fms-tasks':'FMS Tasks',forms:'Forms',catalogs:'Catalogues',records:'Employee Records',leaves:'Leave Tracker',helpslip:'Help Slip'};
+const pageTitles = {dashboard:'Dashboard',owner:'Owner Dashboard',alltasks:'All Tasks',approvals:'Approvals',users:'Users',profile:'Profile',mis:'MIS Report',fms:'FMS Admin','fms-tasks':'FMS Tasks',forms:'Forms',catalogs:'Catalogues',records:'Employee Records',leaves:'Leave Tracker',helpslip:'Help Slip',campaign:'WhatsApp Campaign'};
 
 function navigate(page, el) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -2815,7 +3012,7 @@ function navigate(page, el) {
   tt.textContent = pageTitles[page] || page;
   tt.classList.remove('tm-title-in'); void tt.offsetWidth; tt.classList.add('tm-title-in');
   // Sync mobile bottom nav active state
-  const mobMap = {dashboard:'mob-dashboard',alltasks:'mob-alltasks','fms-tasks':'mob-fms-tasks',forms:'mob-forms',approvals:'mob-approvals',users:'mob-users',mis:'mob-mis',profile:'mob-profile',leaves:'mob-leaves',helpslip:'mob-helpslip'};
+  const mobMap = {dashboard:'mob-dashboard',alltasks:'mob-alltasks','fms-tasks':'mob-fms-tasks',forms:'mob-forms',approvals:'mob-approvals',users:'mob-users',mis:'mob-mis',profile:'mob-profile',leaves:'mob-leaves',helpslip:'mob-helpslip',campaign:'mob-campaign'};
   document.querySelectorAll('.mob-nav-item').forEach(b=>b.classList.remove('active'));
   if (mobMap[page]) { const mb=document.getElementById(mobMap[page]); if(mb) mb.classList.add('active'); }
   if (page==='dashboard') loadDashboard();
@@ -2828,6 +3025,7 @@ function navigate(page, el) {
   if (page==='fms-tasks') loadFMSTasks();
   if (page==='forms') loadForms();
   if (page==='catalogs') loadCatalogues();
+  if (page==='campaign') loadCampaigns();
   if (page==='owner') loadOwnerDash();
   if (page==='mis') initMISDeptFilter();
   if (page==='records') loadRecords();
@@ -5776,6 +5974,569 @@ async function deleteCatalogue(id) {
   showToast('🗑 Catalogue deleted');
   loadCatalogues();
 }
+
+// ══════════════════════════════════════════════════════
+// WHATSAPP CAMPAIGN — template (text + image/PDF) → number list.
+// Server har /send-next call pe EK message bhejta hai aur 55s gap khud
+// enforce karta hai; ye tab loop chalata hai, isliye sending ke dauraan tab
+// khula rehna chahiye (band hua toh wapas aakar "Continue").
+// ══════════════════════════════════════════════════════
+let _cpCfg = { gap_sec: 55, max_numbers: 500, country_code: '91' };
+let _cpList = [];        // history
+let _cpNumbers = [];     // composer list: [{ phone, name }]
+let _cpMedia = null;     // { fileId, type, name, size, previewUrl, progress, done, reused }
+let _cpRun = null;       // is tab me chal raha campaign: { id, timer, nextAt, wait, sending }
+let _cpLive = null;      // live card wala campaign (recipients ke saath)
+let _cpTick = 0, _cpWake = null;
+const CP_RING = 163.4;   // 2πr, r = 26
+
+const CP_STATUS = {
+  running: ['🟢 Running', '#dcfce7', '#15803d'],
+  paused:  ['⏸ Paused',  '#fef3c7', '#b45309'],
+  done:    ['✅ Done',    '#dbeafe', '#1d4ed8'],
+  draft:   ['📝 Draft',   '#f1f5f9', '#475569']
+};
+function cpStatusChip(s) { const [t, bg, c] = CP_STATUS[s] || CP_STATUS.draft; return `<span class="ow-pill" style="background:${bg};color:${c}">${t}</span>`; }
+function cpFmtDur(sec) {
+  sec = Math.max(0, Math.round(sec));
+  if (sec < 60) return sec + ' sec';
+  const h = Math.floor(sec / 3600), m = Math.round((sec % 3600) / 60);
+  return h ? `${h} ghanta${m ? ' ' + m + ' min' : ''}` : `${m} min`;
+}
+// Server UTC "YYYY-MM-DD HH:MM:SS" likhta hai → local date-time
+function cpFmtWhen(s) {
+  const d = new Date(String(s || '').replace(' ', 'T') + 'Z');
+  return isNaN(d) ? escH(s || '') : d.toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: 'numeric', minute: '2-digit' });
+}
+
+async function loadCampaigns() {
+  bustApiCache();
+  const d = await api('/api/campaigns');
+  if (!d || d.error) { showToast('⚠️ ' + (d?.error || 'Campaigns load nahi hue'), 'error'); return; }
+  _cpCfg = d;
+  _cpList = d.campaigns || [];
+  document.getElementById('cpGapLbl').textContent = d.gap_sec;
+  cpRenderHistory();
+  cpRenderNumbers();
+  cpRenderMedia();
+  cpRenderPreview();
+  // Live card: is tab ka campaign → jo dikh raha tha → sabse naya running / adhoora paused
+  const liveId = _cpRun?.id || _cpLive?.id
+    || (_cpList.find(c => c.status === 'running') || _cpList.find(c => c.status === 'paused' && c.pending))?.id;
+  if (liveId) cpShowLive(liveId);
+}
+
+// ── Template editor ──
+function cpWrap(ch) {
+  const ta = document.getElementById('cpMsg');
+  const s = ta.selectionStart, e = ta.selectionEnd, sel = ta.value.slice(s, e) || 'text';
+  ta.value = ta.value.slice(0, s) + ch + sel + ch + ta.value.slice(e);
+  ta.focus(); ta.setSelectionRange(s + 1, s + 1 + sel.length);
+  cpRenderPreview();
+}
+function cpInsert(txt) {
+  const ta = document.getElementById('cpMsg');
+  const s = ta.selectionStart, e = ta.selectionEnd;
+  ta.value = ta.value.slice(0, s) + txt + ta.value.slice(e);
+  ta.focus(); ta.setSelectionRange(s + txt.length, s + txt.length);
+  cpRenderPreview();
+}
+// WhatsApp formatting (*bold* _italic_ ~strike~ ```mono```) → HTML, escape pehle
+function cpWaFormat(text) {
+  return escH(text)
+    .replace(/```([\s\S]+?)```/g, '<code>$1</code>')
+    .replace(/\*([^*\n]+)\*/g, '<b>$1</b>')
+    .replace(/(^|[^\w])_([^_\n]+)_(?!\w)/g, '$1<i>$2</i>')
+    .replace(/~([^~\n]+)~/g, '<s>$1</s>')
+    .replace(/\n/g, '<br>');
+}
+
+function cpRenderPreview() {
+  const msg = document.getElementById('cpMsg').value;
+  const limit = _cpMedia ? 1024 : 4096;   // WhatsApp: caption 1024, text 4096
+  const cnt = document.getElementById('cpCount');
+  cnt.textContent = `${msg.length} / ${limit}`;
+  cnt.classList.toggle('over', msg.length > limit);
+  const sample = (_cpNumbers.find(n => n.name) || {}).name || 'Rahul';
+  let html = '';
+  if (_cpMedia) {
+    html += _cpMedia.type === 'image' && _cpMedia.previewUrl
+      ? `<img src="${escH(_cpMedia.previewUrl)}" alt="">`
+      : `<div class="cp-doc"><span>📄</span><div><b>${escH(_cpMedia.name)}</b><small>PDF${_cpMedia.size ? ' · ' + (_cpMedia.size / 1024 / 1024).toFixed(1) + ' MB' : ''}</small></div></div>`;
+  }
+  if (msg.trim()) {
+    html += `<div class="cp-txt">${cpWaFormat(msg.trim()).replace(/\{\{\s*name\s*\}\}/gi, `<span class="cp-name">${escH(sample)}</span>`)}</div>`;
+  }
+  const bubble = document.getElementById('cpBubble');
+  if (!html) { bubble.className = 'cp-bubble empty'; bubble.innerHTML = 'Message ka preview yahan dikhega'; }
+  else {
+    const time = new Date().toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
+    bubble.className = 'cp-bubble';
+    bubble.innerHTML = html + `<div class="cp-time">${time} <b>✓✓</b></div>`;
+  }
+  cpRenderSummary();
+}
+
+function cpRenderSummary() {
+  const n = _cpNumbers.length, gap = _cpCfg.gap_sec || 55;
+  const att = _cpMedia ? (_cpMedia.type === 'pdf' ? '📄 PDF' : '🖼️ Image') : '—';
+  let html = `<div>Numbers<b>${n}</b></div><div>Har message ke beech<b>${gap} sec</b></div>
+    <div>Total time (approx)<b>${n ? cpFmtDur((n - 1) * gap) : '—'}</b></div><div>Attachment<b>${att}</b></div>`;
+  if (n > 200) html += `<div class="cp-warn">⚠️ Waumfy plan me ek din me max 200 message jaate hain. Limit aate hi campaign khud pause ho jayega — agle din Resume karna.</div>`;
+  document.getElementById('cpSummary').innerHTML = html;
+  const btn = document.getElementById('cpSendBtn');
+  if (btn.dataset.busy) return;
+  btn.disabled = !!_cpRun;
+  btn.textContent = _cpRun ? '⏳ Ek campaign chal raha hai…' : `🚀 Send Campaign${n ? ' · ' + n + ' numbers' : ''}`;
+}
+
+// ── Numbers list ──
+function cpNorm(raw) {
+  let d = String(raw).replace(/\D/g, '').replace(/^0+/, '');
+  if (d.length < 10) return '';
+  if (d.length === 10) d = (_cpCfg.country_code || '91') + d;
+  return d.length > 15 ? '' : d;
+}
+// Har line: "9876543210" · "9876543210, Rahul" · "Rahul, 9876543210" · "98…, 98…, 98…"
+function cpParseText(text) {
+  const out = [];
+  String(text || '').split(/\r?\n/).forEach(line => {
+    const parts = line.split(/[,;\t|]+/).map(s => s.trim().replace(/^"|"$/g, '')).filter(Boolean);
+    // Letters wala hissa naam, sirf digits/symbols wala number (chhota ho toh aage "galat" ginega)
+    const nums = parts.filter(p => /\d/.test(p) && !/\p{L}/u.test(p));
+    const names = parts.filter(p => /\p{L}/u.test(p));
+    if (nums.length === 1) out.push({ raw: nums[0], name: names[0] || '' });
+    else nums.forEach(n => out.push({ raw: n, name: '' }));
+  });
+  return out;
+}
+function cpAddParsed(items) {
+  const have = new Set(_cpNumbers.map(n => n.phone)), max = _cpCfg.max_numbers || 500;
+  let added = 0, dup = 0, bad = 0, over = 0;
+  for (const it of items) {
+    const p = cpNorm(it.raw);
+    if (!p) { bad++; continue; }
+    if (have.has(p)) { dup++; continue; }
+    if (_cpNumbers.length >= max) { over++; continue; }
+    have.add(p);
+    _cpNumbers.push({ phone: p, name: String(it.name || '').slice(0, 60) });
+    added++;
+  }
+  const msg = [`✅ ${added} add hue`];
+  if (dup) msg.push(`${dup} duplicate skip`);
+  if (bad) msg.push(`${bad} galat number`);
+  if (over) msg.push(`${over} limit (${max}) se bahar`);
+  document.getElementById('cpNumMsg').textContent = items.length ? msg.join(' · ') : 'Koi number nahi mila';
+  cpRenderNumbers();
+  cpRenderPreview();
+  return added;
+}
+function cpAddNumbers() {
+  const ta = document.getElementById('cpNumInput');
+  if (!ta.value.trim()) return showToast('Pehle numbers paste karo', 'warning');
+  if (cpAddParsed(cpParseText(ta.value))) ta.value = '';
+}
+async function cpImportFile(input) {
+  const f = input.files[0];
+  input.value = '';
+  if (!f) return;
+  if (f.size > 2 * 1024 * 1024) return showToast('File 2MB se chhoti honi chahiye', 'error');
+  cpAddParsed(cpParseText(await f.text()));
+}
+function cpClearNumbers() {
+  if (_cpNumbers.length && !confirm(`List ke saare ${_cpNumbers.length} numbers hata dein?`)) return;
+  _cpNumbers = [];
+  document.getElementById('cpNumMsg').textContent = '';
+  cpRenderNumbers();
+  cpRenderPreview();
+}
+function cpRemoveNumber(i) { _cpNumbers.splice(i, 1); cpRenderNumbers(); cpRenderPreview(); }
+function cpRenderNumbers() {
+  document.getElementById('cpNumCount').textContent = _cpNumbers.length;
+  document.getElementById('cpNumList').innerHTML = _cpNumbers.length
+    ? _cpNumbers.map((n, i) => `<span class="cp-chip">+${n.phone}${n.name ? ` <small>· ${escH(n.name)}</small>` : ''}<button onclick="cpRemoveNumber(${i})" title="Hatao">✕</button></span>`).join('')
+    : '<div class="cp-hint">Abhi list khaali hai — upar numbers paste karke "List me daalo" dabao.</div>';
+}
+
+// ── Attachment (image / PDF) — select hote hi chunked upload ──
+async function cpPickMedia(input, kind) {
+  const f = input.files[0];
+  input.value = '';
+  if (!f) return;
+  const isPdf = kind === 'pdf';
+  if (isPdf ? !/\.pdf$/i.test(f.name) : !/^image\/(jpeg|png|webp)$/.test(f.type)) {
+    return showToast(isPdf ? 'Sirf PDF file chalegi' : 'Sirf JPG / PNG / WEBP image chalegi', 'error');
+  }
+  const maxMb = isPdf ? 15 : 5;
+  if (f.size > maxMb * 1024 * 1024) return showToast(`File ${maxMb}MB se chhoti honi chahiye`, 'error');
+  cpRemoveMedia();
+  const m = _cpMedia = { fileId: '', type: kind, name: f.name, size: f.size, previewUrl: isPdf ? '' : URL.createObjectURL(f), progress: 0 };
+  cpRenderMedia();
+  cpRenderPreview();
+  try {
+    const CHUNK = 1536 * 1024;   // Vercel-safe request size
+    for (let off = 0; off < f.size; off += CHUNK) {
+      const bytes = new Uint8Array(await f.slice(off, off + CHUNK).arrayBuffer());
+      let bin = '';
+      for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+      const last = off + CHUNK >= f.size;
+      const r = await api('/api/campaigns/upload-media', 'POST', {
+        fileId: m.fileId, filename: f.name, mimeType: f.type || (isPdf ? 'application/pdf' : ''), dataBase64: btoa(bin), last
+      });
+      if (_cpMedia !== m) {   // upload ke beech user ne file hata / badal di
+        if (r && r.fileId) api('/api/campaigns/media/' + encodeURIComponent(r.fileId), 'DELETE');
+        return;
+      }
+      if (!r || r.error) throw new Error(r?.error || 'Upload failed');
+      m.fileId = r.fileId;
+      m.progress = Math.min(100, Math.round(((off + CHUNK) / f.size) * 100));
+      const bar = document.getElementById('cpMediaBar'), pct = document.getElementById('cpMediaPct');
+      if (bar) bar.style.width = m.progress + '%';
+      if (pct) pct.textContent = m.progress + '%';
+    }
+    m.done = true;
+    cpRenderMedia();
+  } catch (e) {
+    if (_cpMedia === m) cpRemoveMedia();
+    showToast('⚠️ ' + e.message, 'error');
+  }
+}
+function cpRemoveMedia() {
+  const m = _cpMedia;
+  if (!m) return;
+  _cpMedia = null;
+  if (m.previewUrl && m.previewUrl.startsWith('blob:')) URL.revokeObjectURL(m.previewUrl);
+  // Upload hui par kisi campaign me use nahi hui file server se hatao
+  if (m.fileId && !m.reused) api('/api/campaigns/media/' + encodeURIComponent(m.fileId), 'DELETE');
+  cpRenderMedia();
+  cpRenderPreview();
+}
+function cpRenderMedia() {
+  const box = document.getElementById('cpMediaBox'), m = _cpMedia;
+  if (!m) { box.innerHTML = ''; return; }
+  const size = m.size ? (m.size / 1024 / 1024).toFixed(1) + ' MB · ' : '';
+  box.innerHTML = `<div class="cp-media">
+    ${m.type === 'image' && m.previewUrl ? `<img src="${escH(m.previewUrl)}" alt="">` : '<div class="cp-pdf-ico">📄</div>'}
+    <div class="cp-media-info">
+      <b title="${escH(m.name)}">${escH(m.name)}</b>
+      <div class="cp-hint">${m.type === 'pdf' ? 'PDF' : 'Image'} · ${size}${m.done
+        ? '<span style="color:#16a34a;font-weight:700">✓ Ready</span>'
+        : 'Uploading… <span id="cpMediaPct">' + (m.progress || 0) + '%</span>'}</div>
+      ${m.done ? '' : `<div class="ow-bar" style="margin-top:6px"><div id="cpMediaBar" style="width:${m.progress || 0}%;transition:width .3s"></div></div>`}
+    </div>
+    <button class="cp-media-x" onclick="cpRemoveMedia()" title="Hatao">✕</button>
+  </div>`;
+}
+
+// ── Start + sending loop ──
+async function cpStart() {
+  if (_cpRun) return showToast('Ek campaign pehle se chal raha hai', 'warning');
+  const msg = document.getElementById('cpMsg').value.trim();
+  if (_cpMedia && !_cpMedia.done) return showToast('Attachment upload ho raha hai — thoda ruko', 'warning');
+  if (!msg && !_cpMedia) return showToast('Message likho ya image / PDF lagao', 'error');
+  const limit = _cpMedia ? 1024 : 4096;
+  if (msg.length > limit) return showToast(`Message ${limit} characters se chhota karo${_cpMedia ? ' (attachment ke saath caption max 1024)' : ''}`, 'error');
+  if (!_cpNumbers.length) return showToast('Numbers list khaali hai', 'error');
+  const n = _cpNumbers.length, gap = _cpCfg.gap_sec || 55;
+  if (!confirm(`${n} number${n > 1 ? 's' : ''} ko ye message jayega.\nHar message ke beech ${gap} sec — total lagbhag ${cpFmtDur((n - 1) * gap)}.\n\nSending ke dauraan ye tab khula rakhna. Shuru karein?`)) return;
+  const btn = document.getElementById('cpSendBtn');
+  btn.disabled = true; btn.dataset.busy = '1'; btn.textContent = '⏳ Campaign bana raha hoon…';
+  const r = await api('/api/campaigns', 'POST', {
+    name: document.getElementById('cpName').value.trim(), message: msg,
+    mediaFileId: _cpMedia?.fileId || '', mediaName: _cpMedia?.name || '', numbers: _cpNumbers
+  });
+  delete btn.dataset.busy;
+  if (!r || r.error) { showToast('⚠️ ' + (r?.error || 'Campaign nahi bana'), 'error'); cpRenderSummary(); return; }
+  if (_cpMedia) _cpMedia.reused = true;   // ab file campaign ki hai — composer se hatane par delete na ho
+  _cpNumbers = [];
+  document.getElementById('cpNumMsg').textContent = '';
+  cpRenderNumbers();
+  showToast(`🚀 Campaign shuru — ${r.campaign.total} numbers`);
+  await cpRunCampaign(r.campaign.id);
+  cpRefreshHistory();
+}
+
+async function cpRunCampaign(id) {
+  if (_cpRun) return;
+  _cpRun = { id, timer: 0, nextAt: 0, wait: 0, sending: false };
+  cpNavDot(true);
+  cpWakeLock(true);
+  clearInterval(_cpTick);
+  _cpTick = setInterval(cpUpdateRing, 1000);
+  await cpShowLive(id);
+  cpRenderSummary();
+  cpStep();
+}
+async function cpStep() {
+  const run = _cpRun;
+  if (!run) return;
+  clearTimeout(run.timer);
+  run.nextAt = 0;
+  run.sending = true;
+  cpMarkSending();
+  cpUpdateRing();
+  const r = await api(`/api/campaigns/${run.id}/send-next`, 'POST', {});
+  if (_cpRun !== run) return;   // beech me pause / delete ho gaya
+  run.sending = false;
+  if (!r || r.error) {
+    if (/not found/i.test(r?.error || '')) return cpStopRun(null);
+    cpMarkSending();
+    cpSetNote(`⚠️ ${r?.error || 'Network error'} — 15 sec me dobara try`);
+    return cpSchedule(15);
+  }
+  if (r.result) cpApplyResult(r.result);
+  cpApplyCampaign(r.campaign);
+  if (r.campaign.status !== 'running') return cpStopRun(r.campaign);
+  cpSchedule(r.wait != null ? r.wait : (r.campaign.next_in || _cpCfg.gap_sec));
+}
+function cpSchedule(sec) {
+  const run = _cpRun;
+  if (!run) return;
+  run.wait = sec;
+  run.nextAt = Date.now() + sec * 1000;
+  run.timer = setTimeout(cpStep, sec * 1000 + 300);
+  cpUpdateRing();
+}
+function cpStopRun(c) {
+  if (_cpRun) clearTimeout(_cpRun.timer);
+  _cpRun = null;
+  clearInterval(_cpTick);
+  cpNavDot(false);
+  cpWakeLock(false);
+  if (c && c.status === 'done') showToast(`🎉 Campaign complete — ${c.sent} sent${c.failed ? ', ' + c.failed + ' failed' : ''}`);
+  else if (c && c.status === 'paused' && c.last_error) showToast('⏸ Campaign ruk gaya: ' + c.last_error, 'error');
+  if (_cpLive) cpApplyCampaign(_cpLive);
+  cpRenderSummary();
+  cpRefreshHistory();
+}
+
+// ── Live card ──
+async function cpShowLive(id, scroll) {
+  bustApiCache();
+  const d = await api('/api/campaigns/' + id);
+  if (!d || d.error) { showToast('⚠️ ' + (d?.error || 'Campaign load nahi hua'), 'error'); return; }
+  _cpLive = d;
+  cpRenderLive();
+  if (scroll) document.getElementById('cpLive').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function cpHideLive() { _cpLive = null; cpRenderLive(); }
+
+function cpRowStatus(r) {
+  if (r.status === 's') return '<span class="cp-st s">✓ Sent</span>';
+  if (r.status === 'f') return `<span class="cp-st f">✗ Failed</span><div class="cp-hint" style="max-width:260px">${escH(r.error || '')}</div>`;
+  if (r.status === 'now') return '<span class="cp-st now">📤 Sending…</span>';
+  return '<span class="cp-st p">⏳ Pending</span>';
+}
+function cpRowTime(r) { return r.at ? new Date(r.at).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', second: '2-digit' }) : ''; }
+
+function cpRenderLive() {
+  const box = document.getElementById('cpLive'), c = _cpLive;
+  if (!c) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  box.style.display = 'block';
+  box.innerHTML = `
+    <div class="cp-live-head">
+      <div class="cp-ring">
+        <svg width="64" height="64"><circle class="bg" cx="32" cy="32" r="26"/><circle class="fg" id="cpRingFg" cx="32" cy="32" r="26" stroke-dasharray="${CP_RING}" stroke-dashoffset="${CP_RING}"/></svg>
+        <span id="cpRingTxt"></span>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div class="cp-live-title">📣 ${escH(c.name)} <span id="cpLiveChip"></span></div>
+        <div class="cp-hint" id="cpLiveNote"></div>
+      </div>
+      <button class="btn btn-outline btn-sm" id="cpLiveClose" onclick="cpHideLive()" title="Band karo">✕</button>
+    </div>
+    <div class="ow-bar" style="height:10px"><div id="cpLiveBar" style="width:0%;transition:width .6s"></div></div>
+    <div class="cp-stats">
+      <div><div class="ow-num" id="cpStSent" style="color:#16a34a">0</div><div class="ow-lbl">✅ Sent</div></div>
+      <div><div class="ow-num" id="cpStFailed" style="color:#dc2626">0</div><div class="ow-lbl">❌ Failed</div></div>
+      <div><div class="ow-num" id="cpStPending" style="color:#d97706">0</div><div class="ow-lbl">⏳ Pending</div></div>
+      <div><div class="ow-num" id="cpStTotal">0</div><div class="ow-lbl">👥 Total</div></div>
+    </div>
+    <div class="cp-actions" id="cpLiveActions"></div>
+    <div id="cpLiveMsg"></div>
+    <div class="cp-log">
+      <table class="ow-tbl">
+        <thead><tr><th>#</th><th>Number</th><th>Naam</th><th>Status</th><th>Time</th></tr></thead>
+        <tbody>${(c.recipients || []).map((r, i) => `<tr>
+          <td style="color:#94a3b8">${i + 1}</td><td style="white-space:nowrap;font-weight:600">+${escH(r.phone)}</td>
+          <td>${escH(r.name || '—')}</td><td id="cprs-${i}">${cpRowStatus(r)}</td>
+          <td id="cprt-${i}" style="white-space:nowrap;color:#64748b">${cpRowTime(r)}</td></tr>`).join('')}</tbody>
+      </table>
+    </div>`;
+  cpApplyCampaign(c);
+}
+
+// Server ka naya state live card pe — numbers, bar, chip, buttons (log table dobara nahi banti)
+function cpApplyCampaign(c) {
+  if (!_cpLive || _cpLive.id !== c.id) return;
+  Object.assign(_cpLive, c, { recipients: _cpLive.recipients });
+  const L = _cpLive, driving = !!(_cpRun && _cpRun.id === L.id);
+  const setTxt = (id, v) => { const el = document.getElementById(id); if (el && el.textContent !== String(v)) el.textContent = v; };
+  setTxt('cpStSent', L.sent); setTxt('cpStFailed', L.failed); setTxt('cpStPending', L.pending); setTxt('cpStTotal', L.total);
+  const bar = document.getElementById('cpLiveBar');
+  if (bar) bar.style.width = (L.total ? Math.round((L.sent + L.failed) / L.total * 100) : 0) + '%';
+  const chip = document.getElementById('cpLiveChip');
+  if (chip) chip.innerHTML = cpStatusChip(L.status);
+  document.getElementById('cpLive').classList.toggle('running', driving);
+  const close = document.getElementById('cpLiveClose');
+  if (close) close.style.display = driving ? 'none' : '';
+
+  const btns = [];
+  if (driving) btns.push(`<button class="btn btn-yellow btn-sm" onclick="cpAction(${L.id},'pause')">⏸ Pause</button>`);
+  else if (L.status === 'running') btns.push(`<button class="btn btn-green btn-sm" onclick="cpRunCampaign(${L.id})">▶ Continue sending</button>`, `<button class="btn btn-outline btn-sm" onclick="cpAction(${L.id},'pause')">⏸ Pause</button>`);
+  else if (L.status === 'paused' || L.status === 'draft') btns.push(`<button class="btn btn-green btn-sm" onclick="cpAction(${L.id},'resume')">▶ Resume</button>`);
+  if (!driving && L.failed && L.status !== 'running') btns.push(`<button class="btn btn-outline btn-sm" onclick="cpAction(${L.id},'retry')">🔁 Retry failed (${L.failed})</button>`);
+  const acts = document.getElementById('cpLiveActions');
+  if (acts) acts.innerHTML = btns.join('');
+
+  const msgBox = document.getElementById('cpLiveMsg');
+  if (msgBox) msgBox.innerHTML = L.last_error
+    ? `<div class="cp-err">⚠️ <b>Ruk gaya:</b> ${escH(L.last_error)}</div>`
+    : (!driving && L.status === 'running')
+      ? `<div class="cp-info">Ye campaign chal raha tha par is tab me sending band hai (tab band / refresh hua tha). "▶ Continue sending" dabao.</div>`
+      : '';
+  if (!driving) cpSetNote(L.status === 'done' ? `Poora ho gaya · ${cpFmtWhen(L.updated_at)}` : L.status === 'paused' ? 'Paused — Resume dabao' : '');
+  cpUpdateRing();
+}
+
+function cpApplyResult(res) {
+  const list = _cpLive?.recipients;
+  if (!list) return;
+  const i = list.findIndex(r => r.phone === res.phone && (r.status === 'p' || r.status === 'now'));
+  if (i < 0) return;
+  Object.assign(list[i], { status: res.ok ? 's' : 'f', error: res.error || '', at: Date.now() });
+  const st = document.getElementById('cprs-' + i), tm = document.getElementById('cprt-' + i);
+  if (st) st.innerHTML = cpRowStatus(list[i]);
+  if (tm) tm.textContent = cpRowTime(list[i]);
+}
+// Agla pending number "Sending…" dikhao (sirf UI) — aur log me usi tak scroll
+function cpMarkSending() {
+  const list = _cpLive?.recipients;
+  if (!list) return;
+  const sending = !!_cpRun?.sending;
+  list.forEach((r, i) => {
+    if (r.status !== 'now') return;
+    r.status = 'p';
+    const st = document.getElementById('cprs-' + i);
+    if (st) st.innerHTML = cpRowStatus(r);
+  });
+  if (!sending) return;
+  const i = list.findIndex(r => r.status === 'p');
+  if (i < 0) return;
+  list[i].status = 'now';
+  const st = document.getElementById('cprs-' + i);
+  if (st) { st.innerHTML = cpRowStatus(list[i]); st.closest('tr')?.scrollIntoView({ block: 'nearest' }); }
+}
+function cpSetNote(t) { const el = document.getElementById('cpLiveNote'); if (el) el.textContent = t; }
+
+function cpUpdateRing() {
+  const fg = document.getElementById('cpRingFg'), txt = document.getElementById('cpRingTxt');
+  if (!fg || !txt || !_cpLive) return;
+  const run = _cpRun && _cpRun.id === _cpLive.id ? _cpRun : null;
+  if (!run) {
+    fg.style.strokeDashoffset = _cpLive.status === 'done' ? 0 : CP_RING;
+    txt.textContent = _cpLive.status === 'done' ? '✓' : _cpLive.status === 'paused' ? '⏸' : '—';
+    return;
+  }
+  if (run.sending || !run.nextAt) {
+    fg.style.strokeDashoffset = 0;
+    txt.textContent = '📤';
+    cpSetNote('📤 Message bhej raha hoon…');
+    return;
+  }
+  const left = Math.max(0, Math.ceil((run.nextAt - Date.now()) / 1000));
+  fg.style.strokeDashoffset = CP_RING * (1 - left / Math.max(1, run.wait));
+  txt.textContent = left + 's';
+  const next = (_cpLive.recipients || []).find(r => r.status === 'p');
+  cpSetNote(next ? `⏳ Agla message ${left} sec me → +${next.phone}` : `⏳ ${left} sec`);
+}
+
+async function cpAction(id, action) {
+  const r = await api(`/api/campaigns/${id}/status`, 'POST', { action });
+  if (!r || r.error) return showToast('⚠️ ' + (r?.error || 'Action failed'), 'error');
+  if (action === 'pause') {
+    if (_cpRun && _cpRun.id === id) cpStopRun(null);
+    showToast('⏸ Campaign paused');
+    await cpShowLive(id);
+  } else if (r.campaign.status === 'running') {
+    if (_cpRun && _cpRun.id === id) cpStopRun(null);
+    await cpRunCampaign(id);
+  } else {
+    await cpShowLive(id);
+  }
+  cpRefreshHistory();
+}
+
+// ── History ──
+async function cpRefreshHistory() {
+  bustApiCache();
+  const d = await api('/api/campaigns');
+  if (d && !d.error) { _cpList = d.campaigns || []; cpRenderHistory(); }
+}
+function cpRenderHistory() {
+  document.getElementById('cpHistCount').textContent = _cpList.length;
+  const tb = document.getElementById('cpHistBody');
+  if (!_cpList.length) {
+    tb.innerHTML = '<tr><td colspan="5" class="empty">Abhi koi campaign nahi — upar template + numbers daalke pehla campaign bhejo 🚀</td></tr>';
+    return;
+  }
+  tb.innerHTML = _cpList.map(c => {
+    const pct = c.total ? Math.round((c.sent + c.failed) / c.total * 100) : 0;
+    const icon = c.media_type === 'pdf' ? '📄 ' : c.media_type === 'image' ? '🖼️ ' : '';
+    return `<tr>
+      <td><b>${icon}${escH(c.name)}</b><div class="cp-hint" style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escH(c.message || '')}</div></td>
+      <td style="white-space:nowrap">${cpFmtWhen(c.created_at)}</td>
+      <td style="min-width:150px">
+        <div style="display:flex;align-items:center;gap:7px"><div class="ow-bar" style="flex:1"><div style="width:${pct}%"></div></div><span style="font-size:11px;font-weight:700;color:#64748b;white-space:nowrap">${c.sent}/${c.total}</span></div>
+        ${c.failed ? `<div style="font-size:11px;color:#dc2626;font-weight:600;margin-top:3px">${c.failed} failed</div>` : ''}
+      </td>
+      <td>${cpStatusChip(c.status)}</td>
+      <td style="white-space:nowrap;text-align:right">
+        <button class="action-btn edit" onclick="cpShowLive(${c.id}, true)">👁 View</button>
+        <button class="action-btn revise" onclick="cpReuse(${c.id})">♻️ Reuse</button>
+        <button class="action-btn delete" onclick="cpDelete(${c.id})" title="Delete">🗑</button>
+      </td></tr>`;
+  }).join('');
+}
+// Purane campaign ka template (naam, message, attachment) composer me — numbers naye daalo
+function cpReuse(id) {
+  const c = _cpList.find(x => x.id === id);
+  if (!c) return;
+  cpRemoveMedia();
+  document.getElementById('cpName').value = c.name + ' (copy)';
+  document.getElementById('cpMsg').value = c.message || '';
+  if (c.media_file_id) {
+    _cpMedia = { fileId: c.media_file_id, type: c.media_type, name: c.media_name || c.media_type,
+      size: 0, previewUrl: c.media_type === 'image' ? '/f/' + c.media_file_id : '', done: true, reused: true };
+  }
+  cpRenderMedia();
+  cpRenderPreview();
+  document.getElementById('cpName').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  showToast('♻️ Template load ho gaya — ab numbers daalo');
+}
+async function cpDelete(id) {
+  const c = _cpList.find(x => x.id === id);
+  if (!confirm(`"${c ? c.name : 'Campaign'}" delete karein? Iska record bhi hat jayega.`)) return;
+  if (_cpRun && _cpRun.id === id) cpStopRun(null);
+  const r = await api('/api/campaigns/' + id, 'DELETE');
+  if (!r || r.error) return showToast('⚠️ ' + (r?.error || 'Delete failed'), 'error');
+  if (_cpLive && _cpLive.id === id) cpHideLive();
+  showToast('🗑 Campaign deleted');
+  cpRefreshHistory();
+}
+
+function cpNavDot(on) { ['nav-campaign', 'mob-campaign'].forEach(id => document.getElementById(id)?.classList.toggle('cp-on', on)); }
+// Sending ke dauraan screen sleep na ho (jahan browser support kare)
+async function cpWakeLock(on) {
+  try {
+    if (on && 'wakeLock' in navigator && !_cpWake) {
+      _cpWake = await navigator.wakeLock.request('screen');
+      _cpWake.addEventListener('release', () => { _cpWake = null; });
+    } else if (!on && _cpWake) { await _cpWake.release(); _cpWake = null; }
+  } catch (e) {}
+}
+document.addEventListener('visibilitychange', () => { if (_cpRun && document.visibilityState === 'visible') cpWakeLock(true); });
+window.addEventListener('beforeunload', e => { if (_cpRun) { e.preventDefault(); e.returnValue = ''; } });
 
 // ══════════════════════════════════════════════════════
 // AI ASSISTANT — chat search over workspace data

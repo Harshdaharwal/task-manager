@@ -677,6 +677,15 @@ const MYSQL_SCHEMA = {
     user_id: "VARCHAR(20) DEFAULT ''", category: "VARCHAR(60) DEFAULT ''", urgency: "VARCHAR(20) DEFAULT 'normal'",
     details: "TEXT", status: "VARCHAR(20) DEFAULT 'open'", resolution: "TEXT",
     resolved_by: "VARCHAR(20) DEFAULT ''", resolved_at: "VARCHAR(40) DEFAULT ''", created_at: "VARCHAR(40) DEFAULT ''"
+  },
+  // WhatsApp campaign — recipients_json: [{ p: phone, n: name, s: 'p'|'s'|'f', e: error, t: sentAtMs }]
+  Campaigns: {
+    name: "VARCHAR(255) DEFAULT ''", message: "TEXT",
+    media_type: "VARCHAR(20) DEFAULT ''", media_name: "VARCHAR(255) DEFAULT ''",
+    media_file_id: "VARCHAR(64) DEFAULT ''", media_link: "TEXT",
+    recipients_json: "LONGTEXT", status: "VARCHAR(20) DEFAULT 'draft'",
+    last_sent_at: "VARCHAR(20) DEFAULT '0'", last_error: "TEXT",
+    created_by: "VARCHAR(20) DEFAULT ''", created_at: "VARCHAR(40) DEFAULT ''", updated_at: "VARCHAR(40) DEFAULT ''"
   }
 };
 
@@ -875,7 +884,8 @@ async function deleteRow(tabName, id) {
 // if missing, mirroring ensureMySqlSchema. Idempotent.
 const EXTRA_SHEET_TABS = {
   Leaves: ['id','user_id','from_date','to_date','leave_type','reason','status','decided_by','decided_at','created_at'],
-  Help_Slips: ['id','user_id','category','urgency','details','status','resolution','resolved_by','resolved_at','created_at']
+  Help_Slips: ['id','user_id','category','urgency','details','status','resolution','resolved_by','resolved_at','created_at'],
+  Campaigns: ['id','name','message','media_type','media_name','media_file_id','media_link','recipients_json','status','last_sent_at','last_error','created_by','created_at','updated_at']
 };
 async function ensureSheetTabs(sheetsApi) {
   const meta = await withRetry(() => sheetsApi.spreadsheets.get({
@@ -1115,7 +1125,9 @@ async function getWaDbConfig() {
 }
 
 // WhatsApp send. Never throws — logs and returns a status object.
-async function sendWhatsApp(rawPhone, message) {
+// media (optional): { type: 'image'|'pdf', url | base64, filename } — Waumfy me
+// file media_url/media_base64 se jaati hai aur text "caption" ban jaata hai.
+async function sendWhatsApp(rawPhone, message, media) {
   const dbCfg = await getWaDbConfig();
   const enabled = (dbCfg.wa_enabled !== undefined && dbCfg.wa_enabled !== '')
     ? String(dbCfg.wa_enabled).toLowerCase() === 'true' : WA.enabled;
@@ -1125,11 +1137,20 @@ async function sendWhatsApp(rawPhone, message) {
   const phone = normalizePhone(rawPhone);
   if (!phone) return { skipped: 'no-phone' };
   if (!url || !apiKey) return { skipped: 'not-configured' };
+  const payload = { [WA.phoneField || 'to']: phone };
+  if (media) {
+    payload.type = media.type;
+    if (media.url) payload.media_url = media.url; else payload.media_base64 = media.base64;
+    if (media.filename) payload.filename = media.filename;
+    if (message) payload.caption = message;
+  } else {
+    payload[WA.messageField || 'text'] = message;
+  }
   try {
     const resp = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', [WA.authHeader || 'x-api-key']: apiKey },
-      body: JSON.stringify({ [WA.phoneField || 'to']: phone, [WA.messageField || 'text']: message }),
+      body: JSON.stringify(payload),
       signal: AbortSignal.timeout(WA.timeoutMs || 20000)
     });
     const body = await resp.text();
@@ -3451,17 +3472,350 @@ app.delete('/api/catalogues/:id', requireAuth, requireAdmin, async (req, res) =>
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// Demo mode (DB_DRIVER=demo) me uploaded files RAM me — id -> { filename, mime, data }
+const _memFiles = new Map();
+
 // Public file serve — unguessable random id, so no auth needed
 app.get('/f/:id', async (req, res) => {
   try {
-    const pool = await catFilesPool();
-    const { rows } = await pool.query('SELECT filename, mime, data FROM app_files WHERE id=$1', [req.params.id]);
-    if (!rows[0]) return res.status(404).send('File not found');
-    res.set('Content-Type', rows[0].mime);
-    res.set('Content-Disposition', `inline; filename="${(rows[0].filename || 'file').replace(/"/g, '')}"`);
+    let file = _memFiles.get(req.params.id);
+    if (!file && (await getDB()) instanceof PgDB) {
+      const pool = await catFilesPool();
+      const { rows } = await pool.query('SELECT filename, mime, data FROM app_files WHERE id=$1', [req.params.id]);
+      file = rows[0];
+    }
+    if (!file) return res.status(404).send('File not found');
+    res.set('Content-Type', file.mime);
+    res.set('Content-Disposition', `inline; filename="${(file.filename || 'file').replace(/"/g, '')}"`);
     res.set('Cache-Control', 'public, max-age=31536000, immutable');
-    res.send(rows[0].data);
+    res.send(file.data);
   } catch (err) { res.status(500).send('Error: ' + err.message); }
+});
+
+// ══════════════════════════════════════════════════════
+// WHATSAPP CAMPAIGNS — ek message (text + optional image/PDF) poori number
+// list ko, har message ke beech CAMPAIGN_GAP_SEC (default 55s) ka gap.
+// Browser tab sending chalata hai: har /send-next call pe server sirf EK
+// message bhejta hai (serverless timeout ke andar). Gap server-side enforce
+// hota hai, isliye do tab khule hon tab bhi 55s se pehle agla message nahi jata.
+// Admin only.
+// ══════════════════════════════════════════════════════
+const CAMPAIGN_GAP_SEC = parseInt(process.env.CAMPAIGN_GAP_SEC) || 55;
+const CAMPAIGN_MAX_NUMBERS = 500;
+const CAMPAIGN_MEDIA = {
+  'image/jpeg':      { type: 'image', max: 5 * 1024 * 1024,  ext: ['jpg', 'jpeg'] },
+  'image/png':       { type: 'image', max: 5 * 1024 * 1024,  ext: ['png'] },
+  'image/webp':      { type: 'image', max: 5 * 1024 * 1024,  ext: ['webp'] },
+  'application/pdf': { type: 'pdf',   max: 15 * 1024 * 1024, ext: ['pdf'] }
+};
+
+// File ke shuru ke bytes asli format se match karein (rename ki hui file na chale)
+function mediaMagicOk(mime, head) {
+  if (mime === 'application/pdf') return head.subarray(0, 4).toString() === '%PDF';
+  if (mime === 'image/jpeg') return head[0] === 0xFF && head[1] === 0xD8 && head[2] === 0xFF;
+  if (mime === 'image/png') return head.subarray(0, 4).equals(Buffer.from([0x89, 0x50, 0x4E, 0x47]));
+  if (mime === 'image/webp') return head.subarray(0, 4).toString() === 'RIFF' && head.subarray(8, 12).toString() === 'WEBP';
+  return false;
+}
+
+// Media bytes: Postgres app_files (catalogues wali table); demo mode me RAM.
+async function mediaStore() {
+  const d = await getDB();
+  if (d instanceof MemDB) return {
+    async create(id, filename, mime, buf) { _memFiles.set(id, { filename, mime, data: buf }); },
+    async append(id, buf) { const f = _memFiles.get(id); f.data = Buffer.concat([f.data, buf]); },
+    async meta(id) { const f = _memFiles.get(id); return f ? { len: f.data.length, mime: f.mime, head: f.data.subarray(0, 12) } : null; },
+    async get(id) { return _memFiles.get(id) || null; },
+    async remove(id) { _memFiles.delete(id); }
+  };
+  let pool;
+  try { pool = await catFilesPool(); }
+  catch (e) { throw new Error('Image/PDF bhejne ke liye PostgreSQL database chahiye (DB_DRIVER=postgres)'); }
+  return {
+    async create(id, filename, mime, buf) { await pool.query('INSERT INTO app_files (id, filename, mime, data) VALUES ($1,$2,$3,$4)', [id, filename, mime, buf]); },
+    async append(id, buf) { await pool.query('UPDATE app_files SET data = data || $1 WHERE id=$2', [buf, id]); },
+    async meta(id) {
+      const { rows } = await pool.query('SELECT octet_length(data) AS len, mime, substring(data from 1 for 12) AS head FROM app_files WHERE id=$1', [id]);
+      return rows[0] ? { len: Number(rows[0].len), mime: rows[0].mime, head: Buffer.from(rows[0].head || []) } : null;
+    },
+    async get(id) { const { rows } = await pool.query('SELECT filename, mime, data FROM app_files WHERE id=$1', [id]); return rows[0] || null; },
+    async remove(id) { await pool.query('DELETE FROM app_files WHERE id=$1', [id]); }
+  };
+}
+
+function cpStamp() { return new Date().toISOString().replace('T', ' ').split('.')[0]; }
+function cpRecipients(c) { try { return JSON.parse(c.recipients_json || '[]'); } catch (e) { return []; } }
+
+function cpPublic(c, withRecipients) {
+  const r = cpRecipients(c);
+  const sent = r.filter(x => x.s === 's').length, failed = r.filter(x => x.s === 'f').length;
+  const last = parseInt(c.last_sent_at) || 0;
+  const out = {
+    id: parseInt(c.id), name: c.name || '', message: c.message || '',
+    media_type: c.media_type || '', media_name: c.media_name || '',
+    media_file_id: c.media_file_id || '', media_link: c.media_link || '',
+    status: c.status || 'draft', total: r.length, sent, failed, pending: r.length - sent - failed,
+    last_error: c.last_error || '', created_at: c.created_at || '', updated_at: c.updated_at || '',
+    next_in: Math.max(0, Math.ceil((last + CAMPAIGN_GAP_SEC * 1000 - Date.now()) / 1000))
+  };
+  if (withRecipients) out.recipients = r.map(x => ({ phone: x.p, name: x.n, status: x.s, error: x.e, at: x.t }));
+  return out;
+}
+
+// "9876543210" / { phone: '+91 98765-43210', name: 'Rahul' } → normalized, duplicates/invalid alag
+function parseCampaignNumbers(items) {
+  const seen = new Set(), list = [], invalid = [];
+  let duplicates = 0;
+  for (const item of items) {
+    const raw = String((item && typeof item === 'object') ? item.phone || '' : item || '').trim();
+    const name = (item && typeof item === 'object') ? String(item.name || '').trim().slice(0, 60) : '';
+    if (!raw) continue;
+    const digits = raw.replace(/\D/g, '').replace(/^0+/, '');
+    const p = normalizePhone(raw);
+    if (digits.length < 10 || p.length > 15) { invalid.push(raw); continue; }
+    if (seen.has(p)) { duplicates++; continue; }
+    seen.add(p);
+    list.push({ p, n: name, s: 'p', e: '', t: 0 });
+  }
+  return { list, invalid, duplicates };
+}
+
+// {{name}} → recipient ka naam; naam na ho toh placeholder (aage ka space bhi) hata do
+function cpFillName(msg, name) {
+  return String(msg || '').replace(/\s?\{\{\s*name\s*\}\}/gi, m => name ? m.replace(/\{\{\s*name\s*\}\}/i, name) : '').trim();
+}
+
+async function campaignMediaPayload(c) {
+  if (!c.media_file_id) return null;
+  const link = String(c.media_link || '');
+  // Public HTTPS link → Waumfy khud download kare (request chhoti, fast).
+  // Localhost/LAN pe Waumfy pahunch nahi sakta → file ke bytes bhejo.
+  if (/^https:\/\//i.test(link) && !/^https:\/\/(localhost|127\.|10\.|192\.168\.)/i.test(link)) {
+    return { type: c.media_type, url: link, filename: c.media_name };
+  }
+  const f = await (await mediaStore()).get(c.media_file_id);
+  if (!f) throw new Error('Attachment file nahi mili — campaign dobara banao');
+  return { type: c.media_type, base64: Buffer.from(f.data).toString('base64'), filename: c.media_name };
+}
+
+function waFailReason(r) {
+  if (r.skipped === 'disabled') return 'WhatsApp OFF hai — settings me ON karo';
+  if (r.skipped === 'not-configured') return 'WhatsApp API (URL / key) set nahi hai';
+  if (r.skipped === 'no-phone') return 'Number galat hai';
+  if (r.error) return /timeout|abort/i.test(r.error)
+    ? 'Timeout — API ne time pe jawab nahi diya (message shayad chala gaya ho)' : r.error;
+  let msg = '';
+  try { const j = JSON.parse(r.body || '{}'); msg = j.message || j.error || j.code || ''; }
+  catch (e) { msg = String(r.body || '').slice(0, 120); }
+  return `HTTP ${r.status}${msg ? ' — ' + (typeof msg === 'string' ? msg : JSON.stringify(msg)) : ''}`;
+}
+// Account-level problem (API off, key galat, plan/daily limit) — har number pe
+// fail karne ke bajaye campaign pause karo; number pending hi rahega.
+function waIsAccountError(r) {
+  return r.skipped === 'disabled' || r.skipped === 'not-configured' || [401, 402, 403, 429].includes(r.status);
+}
+
+async function findCampaign(d, id) {
+  if (d._invalidate) d._invalidate('Campaigns');   // serverless: doosre instance ka cache purana ho sakta hai
+  return d.findOne('Campaigns', { id: String(id) });
+}
+
+// Chunked media upload (Vercel ~4.5MB/request) — image ≤5MB, PDF ≤15MB
+app.post('/api/campaigns/upload-media', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { fileId, filename, mimeType, dataBase64, last } = req.body || {};
+    const chunk = Buffer.from(String(dataBase64 || ''), 'base64');
+    if (!chunk.length) return res.status(400).json({ error: 'File data is empty' });
+    const store = await mediaStore();
+    let id = String(fileId || '').trim();
+    if (!id) {
+      const name = String(filename || '').trim();
+      const mt = String(mimeType || '').toLowerCase();
+      const spec = CAMPAIGN_MEDIA[mt];
+      if (!spec || !spec.ext.includes(name.split('.').pop().toLowerCase())) {
+        return res.status(400).json({ error: 'Sirf JPG / PNG / WEBP image ya PDF allowed hai' });
+      }
+      id = require('crypto').randomBytes(18).toString('base64url');
+      await store.create(id, `${Date.now()}_${name.replace(/[^\w.\- ]+/g, '_')}`, mt, chunk);
+    } else {
+      if (!(await store.meta(id))) return res.status(404).json({ error: 'Upload session not found — please retry' });
+      await store.append(id, chunk);
+    }
+    const meta = await store.meta(id);
+    const spec = CAMPAIGN_MEDIA[meta.mime];
+    if (meta.len > spec.max) {
+      await store.remove(id);
+      return res.status(400).json({ error: `File ${Math.round(spec.max / 1024 / 1024)}MB se badi hai` });
+    }
+    if (!last) return res.json({ success: true, fileId: id });
+    if (!mediaMagicOk(meta.mime, meta.head)) {
+      await store.remove(id);
+      return res.status(400).json({ error: 'File kharab hai ya uska format extension se match nahi karta' });
+    }
+    res.json({ success: true, fileId: id, type: spec.type, size: meta.len });
+  } catch (err) {
+    console.error('Campaign media upload FAILED:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Composer se hatayi gayi file — sirf tab delete jab koi campaign / catalogue use na kare
+app.delete('/api/campaigns/media/:fileId', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const d = await getDB();
+    const fid = String(req.params.fileId);
+    if (d._invalidate) { d._invalidate('Campaigns'); d._invalidate('Catalogues'); }
+    const [camps, cats] = await Promise.all([d.findAll('Campaigns'), d.findAll('Catalogues')]);
+    const used = camps.some(c => c.media_file_id === fid) || cats.some(c => c.file_id === fid);
+    if (!used) await (await mediaStore()).remove(fid);
+    res.json({ success: true, removed: !used });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/campaigns', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const d = await getDB();
+    if (d._invalidate) d._invalidate('Campaigns');
+    const rows = await d.findAll('Campaigns');
+    res.json({
+      gap_sec: CAMPAIGN_GAP_SEC, max_numbers: CAMPAIGN_MAX_NUMBERS, country_code: WA.countryCode,
+      campaigns: rows.map(c => cpPublic(c, false)).sort((a, b) => b.id - a.id)
+    });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/campaigns/:id', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const c = await findCampaign(await getDB(), req.params.id);
+    if (!c) return res.status(404).json({ error: 'Campaign not found' });
+    res.json(cpPublic(c, true));
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Create (aur by default turant "running") — { name, message, mediaFileId, mediaType, mediaName, numbers: [{phone,name}] }
+app.post('/api/campaigns', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const d = await getDB();
+    const b = req.body || {};
+    const message = String(b.message || '').trim();
+    const mediaFileId = String(b.mediaFileId || '').trim();
+    if (!message && !mediaFileId) return res.status(400).json({ error: 'Message likho ya image / PDF lagao' });
+    const maxLen = mediaFileId ? 1024 : 4096;   // WhatsApp: caption 1024, text 4096
+    if (message.length > maxLen) return res.status(400).json({ error: `Message ${maxLen} characters se lamba hai` });
+
+    let mediaType = '', mediaLink = '';
+    if (mediaFileId) {
+      const meta = await (await mediaStore()).meta(mediaFileId);
+      if (!meta || !CAMPAIGN_MEDIA[meta.mime]) return res.status(400).json({ error: 'Attachment nahi mila — file dobara lagao' });
+      mediaType = CAMPAIGN_MEDIA[meta.mime].type;
+      const proto = String(req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0].trim();
+      mediaLink = `${proto}://${req.get('host')}/f/${mediaFileId}`;
+    }
+
+    const { list, invalid, duplicates } = parseCampaignNumbers(Array.isArray(b.numbers) ? b.numbers : []);
+    if (!list.length) return res.status(400).json({ error: 'Kam se kam ek sahi number daalo' });
+    if (list.length > CAMPAIGN_MAX_NUMBERS) return res.status(400).json({ error: `Ek campaign me max ${CAMPAIGN_MAX_NUMBERS} numbers` });
+
+    const now = cpStamp();
+    const row = await d.insert('Campaigns', {
+      name: String(b.name || '').trim().slice(0, 120) || `Campaign ${now.slice(0, 16)}`,
+      message, media_type: mediaType, media_name: mediaFileId ? String(b.mediaName || '').slice(0, 200) : '',
+      media_file_id: mediaFileId, media_link: mediaLink,
+      recipients_json: JSON.stringify(list), status: b.start === false ? 'draft' : 'running',
+      last_sent_at: '0', last_error: '', created_by: String(req.session.userId), created_at: now, updated_at: now
+    });
+    res.json({ success: true, campaign: cpPublic(row, false), invalid, duplicates });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Agle pending number ko EK message. Gap pura na hua ho toh { wait } lautata hai.
+app.post('/api/campaigns/:id/send-next', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const d = await getDB();
+    const c = await findCampaign(d, req.params.id);
+    if (!c) return res.status(404).json({ error: 'Campaign not found' });
+    if (c.status !== 'running') return res.json({ campaign: cpPublic(c, false) });
+
+    const recips = cpRecipients(c);
+    const next = recips.find(x => x.s === 'p');
+    if (!next) {
+      await d.update('Campaigns', c.id, { status: 'done', updated_at: cpStamp() });
+      return res.json({ campaign: cpPublic({ ...c, status: 'done' }, false) });
+    }
+    const prevSent = parseInt(c.last_sent_at) || 0, now = Date.now();
+    const waitMs = prevSent + CAMPAIGN_GAP_SEC * 1000 - now;
+    if (waitMs > 0) return res.json({ wait: Math.ceil(waitMs / 1000), campaign: cpPublic(c, false) });
+    // Slot pehle "claim" karo — doosra tab isi waqt aaye toh use wait milega
+    await d.update('Campaigns', c.id, { last_sent_at: String(now) });
+
+    let r;
+    try { r = await sendWhatsApp(next.p, cpFillName(c.message, next.n), await campaignMediaPayload(c)); }
+    catch (e) { r = { ok: false, error: e.message }; }
+
+    const patch = { updated_at: cpStamp() };
+    if (!r.ok && waIsAccountError(r)) {
+      patch.status = 'paused';
+      patch.last_error = waFailReason(r);
+      patch.last_sent_at = String(prevSent);   // resume pe turant bhej sake
+    } else {
+      if (r.ok) { next.s = 's'; next.e = ''; } else { next.s = 'f'; next.e = waFailReason(r).slice(0, 160); }
+      next.t = now;
+      patch.recipients_json = JSON.stringify(recips);
+      patch.last_error = '';
+      if (!recips.some(x => x.s === 'p')) patch.status = 'done';
+    }
+    await d.update('Campaigns', c.id, patch);
+    res.json({
+      result: { phone: next.p, name: next.n, ok: !!r.ok, error: r.ok ? '' : waFailReason(r) },
+      campaign: cpPublic({ ...c, last_sent_at: patch.last_sent_at || String(now), ...patch }, false)
+    });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// { action: 'pause' | 'resume' | 'retry' }  — retry = failed numbers ko dobara pending
+app.post('/api/campaigns/:id/status', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const d = await getDB();
+    const c = await findCampaign(d, req.params.id);
+    if (!c) return res.status(404).json({ error: 'Campaign not found' });
+    const action = String(req.body?.action || '');
+    const recips = cpRecipients(c);
+    const patch = { updated_at: cpStamp() };
+    if (action === 'pause') {
+      if (c.status !== 'running') return res.status(400).json({ error: 'Campaign chal nahi raha' });
+      patch.status = 'paused';
+    } else if (action === 'resume') {
+      if (!['paused', 'draft'].includes(c.status)) return res.status(400).json({ error: 'Ye campaign resume nahi ho sakta' });
+      patch.status = recips.some(x => x.s === 'p') ? 'running' : 'done';
+      patch.last_error = '';
+    } else if (action === 'retry') {
+      const failed = recips.filter(x => x.s === 'f');
+      if (!failed.length) return res.status(400).json({ error: 'Koi failed number nahi hai' });
+      failed.forEach(x => { x.s = 'p'; x.e = ''; x.t = 0; });
+      patch.recipients_json = JSON.stringify(recips);
+      patch.status = 'running';
+      patch.last_error = '';
+    } else {
+      return res.status(400).json({ error: 'Unknown action' });
+    }
+    await d.update('Campaigns', c.id, patch);
+    res.json({ success: true, campaign: cpPublic({ ...c, ...patch }, false) });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/campaigns/:id', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const d = await getDB();
+    const c = await findCampaign(d, req.params.id);
+    if (!c) return res.status(404).json({ error: 'Campaign not found' });
+    await d.delete('Campaigns', c.id);
+    // Attachment tabhi hatao jab koi aur campaign use reuse na kar raha ho
+    if (c.media_file_id) {
+      const others = (await d.findAll('Campaigns')).some(x => x.media_file_id === c.media_file_id && String(x.id) !== String(c.id));
+      if (!others) { try { await (await mediaStore()).remove(c.media_file_id); } catch (e) {} }
+    }
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // GET /api/fms-tasks — list FMS configs (for task view dropdown)
