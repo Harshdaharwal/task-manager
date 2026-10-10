@@ -685,7 +685,10 @@ const MYSQL_SCHEMA = {
     media_file_id: "VARCHAR(64) DEFAULT ''", media_link: "TEXT",
     recipients_json: "LONGTEXT", status: "VARCHAR(20) DEFAULT 'draft'",
     last_sent_at: "VARCHAR(20) DEFAULT '0'", last_error: "TEXT",
-    created_by: "VARCHAR(20) DEFAULT ''", created_at: "VARCHAR(40) DEFAULT ''", updated_at: "VARCHAR(40) DEFAULT ''"
+    created_by: "VARCHAR(20) DEFAULT ''", created_at: "VARCHAR(40) DEFAULT ''", updated_at: "VARCHAR(40) DEFAULT ''",
+    // Repeat: once | daily | weekly | monthly — anchor_at = pehla scheduled slot (ms), runs_json = har run ka summary
+    repeat_mode: "VARCHAR(10) DEFAULT 'once'", anchor_at: "VARCHAR(20) DEFAULT '0'",
+    next_run_at: "VARCHAR(20) DEFAULT '0'", run_count: "VARCHAR(10) DEFAULT '1'", runs_json: "TEXT"
   }
 };
 
@@ -885,7 +888,7 @@ async function deleteRow(tabName, id) {
 const EXTRA_SHEET_TABS = {
   Leaves: ['id','user_id','from_date','to_date','leave_type','reason','status','decided_by','decided_at','created_at'],
   Help_Slips: ['id','user_id','category','urgency','details','status','resolution','resolved_by','resolved_at','created_at'],
-  Campaigns: ['id','name','message','media_type','media_name','media_file_id','media_link','recipients_json','status','last_sent_at','last_error','created_by','created_at','updated_at']
+  Campaigns: ['id','name','message','media_type','media_name','media_file_id','media_link','recipients_json','status','last_sent_at','last_error','created_by','created_at','updated_at','repeat_mode','anchor_at','next_run_at','run_count','runs_json']
 };
 async function ensureSheetTabs(sheetsApi) {
   const meta = await withRetry(() => sheetsApi.spreadsheets.get({
@@ -893,7 +896,20 @@ async function ensureSheetTabs(sheetsApi) {
   }));
   const existing = new Set((meta.data.sheets || []).map(s => s.properties.title));
   for (const [tab, headers] of Object.entries(EXTRA_SHEET_TABS)) {
-    if (existing.has(tab)) continue;
+    if (existing.has(tab)) {
+      // Tab hai par naye columns nahi — missing headers end me jodo (purane columns waise hi)
+      const cur = await withRetry(() => sheetsApi.spreadsheets.values.get({ spreadsheetId: SHEET_ID, range: `${tab}!1:1` }));
+      const have = (cur.data.values && cur.data.values[0]) || [];
+      const missing = headers.filter(h => !have.includes(h));
+      if (missing.length && have.length) {
+        await withRetry(() => sheetsApi.spreadsheets.values.update({
+          spreadsheetId: SHEET_ID, range: `${tab}!A1`,
+          valueInputOption: 'RAW', requestBody: { values: [[...have, ...missing]] }
+        }));
+        console.log(`  sheet tab ${tab}: + ${missing.join(', ')}`);
+      }
+      continue;
+    }
     await withRetry(() => sheetsApi.spreadsheets.batchUpdate({
       spreadsheetId: SHEET_ID,
       requestBody: { requests: [{ addSheet: { properties: { title: tab } } }] }
@@ -3545,6 +3561,8 @@ async function mediaStore() {
 
 function cpStamp() { return new Date().toISOString().replace('T', ' ').split('.')[0]; }
 function cpRecipients(c) { try { return JSON.parse(c.recipients_json || '[]'); } catch (e) { return []; } }
+function cpRuns(c) { try { return JSON.parse(c.runs_json || '[]'); } catch (e) { return []; } }
+const CAMPAIGN_REPEAT = ['once', 'daily', 'weekly', 'monthly'];
 
 function cpPublic(c, withRecipients) {
   const r = cpRecipients(c);
@@ -3556,10 +3574,133 @@ function cpPublic(c, withRecipients) {
     media_file_id: c.media_file_id || '', media_link: c.media_link || '',
     status: c.status || 'draft', total: r.length, sent, failed, pending: r.length - sent - failed,
     last_error: c.last_error || '', created_at: c.created_at || '', updated_at: c.updated_at || '',
-    next_in: Math.max(0, Math.ceil((last + CAMPAIGN_GAP_SEC * 1000 - Date.now()) / 1000))
+    next_in: Math.max(0, Math.ceil((last + CAMPAIGN_GAP_SEC * 1000 - Date.now()) / 1000)),
+    repeat_mode: CAMPAIGN_REPEAT.includes(c.repeat_mode) ? c.repeat_mode : 'once',
+    next_run_at: parseInt(c.next_run_at) || 0, run_count: parseInt(c.run_count) || 1
   };
-  if (withRecipients) out.recipients = r.map(x => ({ phone: x.p, name: x.n, status: x.s, error: x.e, at: x.t }));
+  if (withRecipients) {
+    out.recipients = r.map(x => ({ phone: x.p, name: x.n, status: x.s, error: x.e, at: x.t }));
+    out.runs = cpRuns(c);
+  }
   return out;
+}
+
+// anchor (pehla scheduled slot) se agla slot jo `after` ke BAAD ho — wahi time,
+// agla din / hafta / mahina (31 tareekh wale mahine me chhote mahine ki last date)
+function cpNextRun(anchor, mode, after) {
+  const a = new Date(anchor || after);
+  if (mode === 'monthly') {
+    for (let k = 1; k < 1200; k++) {
+      const y = a.getUTCFullYear(), m = a.getUTCMonth() + k;
+      const lastDay = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+      const t = Date.UTC(y, m, Math.min(a.getUTCDate(), lastDay), a.getUTCHours(), a.getUTCMinutes());
+      if (t > after) return t;
+    }
+  }
+  const step = (mode === 'weekly' ? 7 : 1) * 86400000;
+  return a.getTime() + Math.max(1, Math.ceil((after - a.getTime() + 1) / step)) * step;
+}
+
+// Run khatam: once → done; repeat → "scheduled" + agla time. Run ka summary history me.
+function cpFinishPatch(c, recips, now) {
+  const runs = cpRuns(c);
+  runs.push({ at: now, sent: recips.filter(x => x.s === 's').length, failed: recips.filter(x => x.s === 'f').length });
+  const mode = CAMPAIGN_REPEAT.includes(c.repeat_mode) ? c.repeat_mode : 'once';
+  const patch = { runs_json: JSON.stringify(runs.slice(-30)), updated_at: cpStamp() };
+  if (mode === 'once') patch.status = 'done';
+  else { patch.status = 'scheduled'; patch.next_run_at = String(cpNextRun(parseInt(c.anchor_at) || now, mode, now)); }
+  return patch;
+}
+
+// Atomic compare-and-set: row tabhi update ho jab `col` abhi bhi `expect` ho.
+// Browser loop aur cron ek hi pal me aayein toh sirf ek jeete — double message nahi.
+async function cpCas(d, id, col, expect, patch) {
+  const keys = Object.keys(patch);
+  if (d instanceof PgDB || d instanceof MySqlDB) {
+    const pg = d instanceof PgDB;
+    const set = keys.map((k, i) => pg ? `"${k}"=$${i + 1}` : '`' + k + '`=?').join(', ');
+    const where = pg ? `id=$${keys.length + 1} AND COALESCE("${col}",'')=$${keys.length + 2}`
+                     : 'id=? AND COALESCE(`' + col + '`,\'\')=?';
+    const sql = `UPDATE ${pg ? '"Campaigns"' : '`Campaigns`'} SET ${set} WHERE ${where}`;
+    const res = await d.pool.query(sql, [...keys.map(k => String(patch[k])), String(id), String(expect)]);
+    d._invalidate('Campaigns');
+    return pg ? res.rowCount === 1 : res[0].affectedRows === 1;
+  }
+  // MemDB live row object deta hai (check + write beech me koi await nahi); Sheets best-effort
+  const live = await d.findOne('Campaigns', { id: String(id) });
+  if (!live || String(live[col] ?? '') !== String(expect)) return false;
+  await d.update('Campaigns', id, patch);
+  return true;
+}
+
+// Ek campaign ka agla kadam: scheduled run shuru karna / gap check / EK message.
+// Browser (/send-next) aur cron dono yahi use karte hain.
+async function campaignSendNext(d, c) {
+  let now = Date.now();
+  if (c.status === 'scheduled') {
+    if ((parseInt(c.next_run_at) || 0) > now) return { campaign: cpPublic(c, false) };
+    // Repeat ka time aa gaya → naya run: saare numbers dobara pending
+    const patch = {
+      status: 'running', last_sent_at: '0', last_error: '', updated_at: cpStamp(),
+      recipients_json: JSON.stringify(cpRecipients(c).map(x => ({ p: x.p, n: x.n, s: 'p', e: '', t: 0 }))),
+      run_count: String((parseInt(c.run_count) || 1) + 1)
+    };
+    if (!(await cpCas(d, c.id, 'status', 'scheduled', patch))) return { wait: 5, campaign: cpPublic(c, false) };
+    c = { ...c, ...patch };
+  }
+  if (c.status !== 'running') return { campaign: cpPublic(c, false) };
+
+  const recips = cpRecipients(c);
+  const next = recips.find(x => x.s === 'p');
+  if (!next) {
+    const patch = cpFinishPatch(c, recips, now);
+    if (!(await cpCas(d, c.id, 'status', 'running', patch))) return { wait: 5, campaign: cpPublic(c, false) };
+    return { campaign: cpPublic({ ...c, ...patch }, false) };
+  }
+  const prevSent = parseInt(c.last_sent_at) || 0;
+  const waitMs = prevSent + CAMPAIGN_GAP_SEC * 1000 - now;
+  if (waitMs > 0) return { wait: Math.ceil(waitMs / 1000), campaign: cpPublic(c, false) };
+  // Slot claim — doosra caller (tab / cron) isi waqt aaya toh use wait milega
+  if (!(await cpCas(d, c.id, 'last_sent_at', c.last_sent_at ?? '', { last_sent_at: String(now) }))) {
+    return { wait: 5, campaign: cpPublic(c, false) };
+  }
+
+  let r;
+  try { r = await sendWhatsApp(next.p, cpFillName(c.message, next.n), await campaignMediaPayload(c)); }
+  catch (e) { r = { ok: false, error: e.message }; }
+  now = Date.now();
+
+  const patch = { updated_at: cpStamp() };
+  if (!r.ok && waIsAccountError(r)) {
+    patch.status = 'paused';
+    patch.last_error = waFailReason(r);
+    patch.last_sent_at = String(prevSent);   // resume pe turant bhej sake
+  } else {
+    if (r.ok) { next.s = 's'; next.e = ''; } else { next.s = 'f'; next.e = waFailReason(r).slice(0, 160); }
+    next.t = now;
+    patch.recipients_json = JSON.stringify(recips);
+    patch.last_error = '';
+    if (!recips.some(x => x.s === 'p')) Object.assign(patch, cpFinishPatch(c, recips, now));
+  }
+  // Pause beech me dabaya gaya ho toh status mat palto
+  const latest = await findCampaign(d, c.id);
+  if (latest && latest.status === 'paused' && !patch.status) patch.status = 'paused';
+  await d.update('Campaigns', c.id, patch);
+  return {
+    result: { phone: next.p, name: next.n, ok: !!r.ok, error: r.ok ? '' : waFailReason(r) },
+    campaign: cpPublic({ ...c, last_sent_at: patch.last_sent_at || String(now), ...patch }, false)
+  };
+}
+
+// External cron (cron-job.org) ke liye secret key — App_Settings me ek baar banti hai
+async function campaignCronKey(d) {
+  if (process.env.CAMPAIGN_CRON_KEY) return process.env.CAMPAIGN_CRON_KEY;
+  if (d._invalidate) d._invalidate('App_Settings');
+  const row = (await d.findAll('App_Settings')).find(r => r.setting_key === 'campaign_cron_key');
+  if (row && row.setting_value) return row.setting_value;
+  const key = require('crypto').randomBytes(18).toString('base64url');
+  await d.insert('App_Settings', { setting_key: 'campaign_cron_key', setting_value: key });
+  return key;
 }
 
 // "9876543210" / { phone: '+91 98765-43210', name: 'Rahul' } → normalized, duplicates/invalid alag
@@ -3677,10 +3818,39 @@ app.get('/api/campaigns', requireAuth, requireAdmin, async (req, res) => {
     const d = await getDB();
     if (d._invalidate) d._invalidate('Campaigns');
     const rows = await d.findAll('Campaigns');
+    let cronUrl = '';
+    try {
+      const proto = String(req.headers['x-forwarded-proto'] || req.protocol || 'https').split(',')[0].trim();
+      cronUrl = `${proto}://${req.get('host')}/api/campaigns/cron?key=${encodeURIComponent(await campaignCronKey(d))}`;
+    } catch (e) {}
     res.json({
-      gap_sec: CAMPAIGN_GAP_SEC, max_numbers: CAMPAIGN_MAX_NUMBERS, country_code: WA.countryCode,
+      gap_sec: CAMPAIGN_GAP_SEC, max_numbers: CAMPAIGN_MAX_NUMBERS, country_code: WA.countryCode, cron_url: cronUrl,
       campaigns: rows.map(c => cpPublic(c, false)).sort((a, b) => b.id - a.id)
     });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// External cron har minute hit kare (cron-job.org) → tab band ho tab bhi running
+// campaigns chalte rahein aur daily/weekly/monthly run time pe shuru ho.
+// Har hit pe har campaign ka max EK message; gap aur double-send guard same.
+app.all('/api/campaigns/cron', async (req, res) => {
+  try {
+    const d = await getDB();
+    const given = String(req.query.key || req.headers['x-cron-key'] || '');
+    const real = await campaignCronKey(d);
+    if (!given || given.length !== real.length || !require('crypto').timingSafeEqual(Buffer.from(given), Buffer.from(real))) {
+      return res.status(401).json({ error: 'Invalid key' });
+    }
+    if (d._invalidate) d._invalidate('Campaigns');
+    const now = Date.now(), started = Date.now(), out = [];
+    const due = (await d.findAll('Campaigns'))
+      .filter(c => c.status === 'running' || (c.status === 'scheduled' && (parseInt(c.next_run_at) || 0) <= now));
+    for (const c of due) {
+      if (Date.now() - started > 6000) break;   // serverless time budget — baaki agle minute
+      const r = await campaignSendNext(d, c);
+      out.push({ id: parseInt(c.id), status: r.campaign.status, sent: r.result ? r.result.ok : null, wait: r.wait ?? null });
+    }
+    res.json({ ok: true, at: new Date().toISOString(), processed: out });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -3716,63 +3886,34 @@ app.post('/api/campaigns', requireAuth, requireAdmin, async (req, res) => {
     if (!list.length) return res.status(400).json({ error: 'Kam se kam ek sahi number daalo' });
     if (list.length > CAMPAIGN_MAX_NUMBERS) return res.status(400).json({ error: `Ek campaign me max ${CAMPAIGN_MAX_NUMBERS} numbers` });
 
+    // Repeat: pehla run abhi; agle run anchor (chuna hua time) ke hisaab se din/hafta/mahina baad
+    const repeat = CAMPAIGN_REPEAT.includes(b.repeat) ? b.repeat : 'once';
+    const anchor = parseInt(b.anchorAt) > 0 ? parseInt(b.anchorAt) : Date.now();
     const now = cpStamp();
     const row = await d.insert('Campaigns', {
       name: String(b.name || '').trim().slice(0, 120) || `Campaign ${now.slice(0, 16)}`,
       message, media_type: mediaType, media_name: mediaFileId ? String(b.mediaName || '').slice(0, 200) : '',
       media_file_id: mediaFileId, media_link: mediaLink,
       recipients_json: JSON.stringify(list), status: b.start === false ? 'draft' : 'running',
-      last_sent_at: '0', last_error: '', created_by: String(req.session.userId), created_at: now, updated_at: now
+      last_sent_at: '0', last_error: '', created_by: String(req.session.userId), created_at: now, updated_at: now,
+      repeat_mode: repeat, anchor_at: String(anchor), next_run_at: '0', run_count: '1', runs_json: '[]'
     });
     res.json({ success: true, campaign: cpPublic(row, false), invalid, duplicates });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Agle pending number ko EK message. Gap pura na hua ho toh { wait } lautata hai.
+// Agle pending number ko EK message (browser loop). Gap pura na hua ho toh { wait }.
 app.post('/api/campaigns/:id/send-next', requireAuth, requireAdmin, async (req, res) => {
   try {
     const d = await getDB();
     const c = await findCampaign(d, req.params.id);
     if (!c) return res.status(404).json({ error: 'Campaign not found' });
-    if (c.status !== 'running') return res.json({ campaign: cpPublic(c, false) });
-
-    const recips = cpRecipients(c);
-    const next = recips.find(x => x.s === 'p');
-    if (!next) {
-      await d.update('Campaigns', c.id, { status: 'done', updated_at: cpStamp() });
-      return res.json({ campaign: cpPublic({ ...c, status: 'done' }, false) });
-    }
-    const prevSent = parseInt(c.last_sent_at) || 0, now = Date.now();
-    const waitMs = prevSent + CAMPAIGN_GAP_SEC * 1000 - now;
-    if (waitMs > 0) return res.json({ wait: Math.ceil(waitMs / 1000), campaign: cpPublic(c, false) });
-    // Slot pehle "claim" karo — doosra tab isi waqt aaye toh use wait milega
-    await d.update('Campaigns', c.id, { last_sent_at: String(now) });
-
-    let r;
-    try { r = await sendWhatsApp(next.p, cpFillName(c.message, next.n), await campaignMediaPayload(c)); }
-    catch (e) { r = { ok: false, error: e.message }; }
-
-    const patch = { updated_at: cpStamp() };
-    if (!r.ok && waIsAccountError(r)) {
-      patch.status = 'paused';
-      patch.last_error = waFailReason(r);
-      patch.last_sent_at = String(prevSent);   // resume pe turant bhej sake
-    } else {
-      if (r.ok) { next.s = 's'; next.e = ''; } else { next.s = 'f'; next.e = waFailReason(r).slice(0, 160); }
-      next.t = now;
-      patch.recipients_json = JSON.stringify(recips);
-      patch.last_error = '';
-      if (!recips.some(x => x.s === 'p')) patch.status = 'done';
-    }
-    await d.update('Campaigns', c.id, patch);
-    res.json({
-      result: { phone: next.p, name: next.n, ok: !!r.ok, error: r.ok ? '' : waFailReason(r) },
-      campaign: cpPublic({ ...c, last_sent_at: patch.last_sent_at || String(now), ...patch }, false)
-    });
+    res.json(await campaignSendNext(d, c));
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// { action: 'pause' | 'resume' | 'retry' }  — retry = failed numbers ko dobara pending
+// { action: 'pause' | 'resume' | 'retry' | 'run-now' | 'stop-repeat' }
+//   retry = failed numbers dobara pending · run-now = scheduled run abhi · stop-repeat = aage repeat band
 app.post('/api/campaigns/:id/status', requireAuth, requireAdmin, async (req, res) => {
   try {
     const d = await getDB();
@@ -3780,14 +3921,25 @@ app.post('/api/campaigns/:id/status', requireAuth, requireAdmin, async (req, res
     if (!c) return res.status(404).json({ error: 'Campaign not found' });
     const action = String(req.body?.action || '');
     const recips = cpRecipients(c);
+    const repeating = CAMPAIGN_REPEAT.includes(c.repeat_mode) && c.repeat_mode !== 'once';
     const patch = { updated_at: cpStamp() };
     if (action === 'pause') {
-      if (c.status !== 'running') return res.status(400).json({ error: 'Campaign chal nahi raha' });
+      if (!['running', 'scheduled'].includes(c.status)) return res.status(400).json({ error: 'Campaign chal nahi raha' });
       patch.status = 'paused';
     } else if (action === 'resume') {
       if (!['paused', 'draft'].includes(c.status)) return res.status(400).json({ error: 'Ye campaign resume nahi ho sakta' });
-      patch.status = recips.some(x => x.s === 'p') ? 'running' : 'done';
+      // Adhoora run → aage chalao; run poora tha → repeat wala agle slot ka intezaar kare
+      if (recips.some(x => x.s === 'p')) patch.status = 'running';
+      else if (repeating) { patch.status = 'scheduled'; patch.next_run_at = String(cpNextRun(parseInt(c.anchor_at) || Date.now(), c.repeat_mode, Date.now())); }
+      else patch.status = 'done';
       patch.last_error = '';
+    } else if (action === 'run-now') {
+      if (c.status !== 'scheduled') return res.status(400).json({ error: 'Sirf scheduled campaign abhi chalaya ja sakta hai' });
+      patch.next_run_at = String(Date.now());   // agla /send-next naya run shuru karega
+    } else if (action === 'stop-repeat') {
+      if (!repeating) return res.status(400).json({ error: 'Is campaign me repeat on nahi hai' });
+      patch.repeat_mode = 'once';
+      if (c.status === 'scheduled') patch.status = 'done';
     } else if (action === 'retry') {
       const failed = recips.filter(x => x.s === 'f');
       if (!failed.length) return res.status(400).json({ error: 'Koi failed number nahi hai' });

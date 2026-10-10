@@ -361,7 +361,19 @@ tbody tr:last-child td{border-bottom:none;}
 .cp-summary > div{background:#f8fafc;border:1px solid #eef2f7;border-radius:10px;padding:8px 10px;font-size:11px;color:#64748b;font-weight:600;}
 .cp-summary b{display:block;font-size:15px;color:#1e293b;}
 .cp-summary .cp-warn{grid-column:1/-1;background:#fffbeb;border-color:#fde68a;color:#92400e;font-weight:500;line-height:1.5;}
+.cp-summary .cp-sched{grid-column:1/-1;background:#f5f3ff;border-color:#ddd6fe;color:#5b21b6;font-weight:500;line-height:1.5;}
 .cp-send{width:100%;justify-content:center;padding:12px;font-size:14px;border-radius:12px;}
+.cp-repeat{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;}
+.cp-repeat.once{grid-template-columns:1fr;}
+.cp-auto{margin-top:16px;}
+.cp-auto summary{list-style:none;}
+.cp-auto summary::-webkit-details-marker{display:none;}
+.cp-auto summary::after{content:'▾';margin-left:auto;color:#94a3b8;transition:transform .2s;}
+.cp-auto[open] summary::after{transform:rotate(180deg);}
+.cp-cron{display:flex;gap:8px;margin-top:10px;}
+.cp-cron input{font-family:ui-monospace,Consolas,monospace;font-size:12px;background:#f8fafc;}
+.cp-runs{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+.cp-runs span{background:#f8fafc;border:1px solid #eef2f7;border-radius:8px;padding:4px 9px;font-size:11px;color:#475569;}
 /* Live progress */
 .cp-live{margin-bottom:16px;border:1.5px solid #ddd6fe;}
 .cp-live.running{border-color:#86efac;box-shadow:0 8px 30px rgba(34,197,94,.15);}
@@ -1678,9 +1690,10 @@ button:disabled{opacity:.65;cursor:not-allowed !important;}
             placeholder="Ek line me ek number — chaho toh comma ke baad naam:&#10;9876543210&#10;9876543211, Rahul"></textarea>
           <div class="cp-row">
             <button class="btn btn-primary btn-sm" onclick="cpAddNumbers()">➕ List me daalo</button>
-            <button class="btn btn-outline btn-sm" onclick="document.getElementById('cpCsvFile').click()">📥 CSV / TXT</button>
+            <button class="btn btn-outline btn-sm" onclick="document.getElementById('cpCsvFile').click()">📥 CSV / Excel upload</button>
+            <button class="btn btn-outline btn-sm" onclick="cpDownloadSample()" title="Template download karo, numbers bharo, phir upload karo">⬇️ Sample CSV</button>
             <button class="btn btn-outline btn-sm" onclick="cpClearNumbers()">🗑 Clear</button>
-            <input type="file" id="cpCsvFile" accept=".csv,.txt,text/csv,text/plain" style="display:none" onchange="cpImportFile(this)"/>
+            <input type="file" id="cpCsvFile" accept=".csv,.txt,.xlsx,.xls,text/csv,text/plain" style="display:none" onchange="cpImportFile(this)"/>
           </div>
           <div id="cpNumMsg" class="cp-hint" style="margin-top:8px"></div>
           <div id="cpNumList" class="cp-numlist"></div>
@@ -1697,6 +1710,21 @@ button:disabled{opacity:.65;cursor:not-allowed !important;}
               <div><b>Your Business</b><small>online</small></div>
             </div>
             <div class="cp-chat"><div id="cpBubble" class="cp-bubble"></div></div>
+          </div>
+          <div class="cp-repeat">
+            <div class="form-group" style="margin:0">
+              <label>🔁 Kitni baar bhejna hai?</label>
+              <select class="fm-input" id="cpRepeat" onchange="cpRenderSummary()">
+                <option value="once">Sirf ek baar (abhi)</option>
+                <option value="daily">Roz — Daily</option>
+                <option value="weekly">Har hafte — Weekly</option>
+                <option value="monthly">Har mahine — Monthly</option>
+              </select>
+            </div>
+            <div class="form-group" id="cpRepeatTimeWrap" style="margin:0;display:none">
+              <label>⏰ Kis time pe</label>
+              <input class="fm-input" type="time" id="cpRepeatTime" value="10:00" onchange="cpRenderSummary()"/>
+            </div>
           </div>
           <div id="cpSummary" class="cp-summary"></div>
           <button class="btn btn-green cp-send" id="cpSendBtn" onclick="cpStart()">🚀 Send Campaign</button>
@@ -1715,6 +1743,24 @@ button:disabled{opacity:.65;cursor:not-allowed !important;}
         </table>
       </div>
     </div>
+
+    <!-- Auto-send: external cron (tab band ho tab bhi) -->
+    <details class="cp-card cp-auto" id="cpAuto">
+      <summary class="cp-step" style="margin:0;cursor:pointer">⚙️ Auto-send setup <span class="cp-hint" style="font-weight:500">— tab band ho tab bhi campaign chale (daily / weekly / monthly ke liye zaroori)</span></summary>
+      <div style="margin-top:14px;font-size:13px;color:#374151;line-height:1.65">
+        Abhi sending tabhi chalti hai jab ye app kisi admin ke browser me khula ho. Hamesha apne aap chalane ke liye ek free cron service se ye link <b>har minute</b> khulwao:
+        <div class="cp-cron">
+          <input class="fm-input" id="cpCronUrl" readonly onclick="this.select()"/>
+          <button class="btn btn-primary btn-sm" onclick="cpCopyCron()">📋 Copy</button>
+        </div>
+        <ol style="margin:10px 0 0 18px">
+          <li><a href="https://cron-job.org" target="_blank" rel="noopener">cron-job.org</a> pe free account banao</li>
+          <li><b>Create cronjob</b> → URL me upar wala link paste karo</li>
+          <li>Schedule: <b>Every 1 minute</b> → Save</li>
+        </ol>
+        <div class="cp-hint" style="margin-top:8px">🔒 Link me secret key hai — kisi ko share mat karna. Browser aur cron dono chalein tab bhi ek number pe message ek hi baar jayega.</div>
+      </div>
+    </details>
   </div>
 
   <!-- ── FORMS ── -->
@@ -2913,6 +2959,7 @@ async function init() {
       // Mobile nav
       document.getElementById('mob-users').style.display = 'flex';
       document.getElementById('mob-campaign').style.display = 'flex';
+      cpStartAutoPoll();   // adhoore / time aaye campaigns apne aap chalao
     }
     // FMS Tasks — sab users ko dikhta hai
     document.getElementById('nav-fms-tasks').style.display = 'flex';
@@ -5994,8 +6041,30 @@ const CP_STATUS = {
   running: ['🟢 Running', '#dcfce7', '#15803d'],
   paused:  ['⏸ Paused',  '#fef3c7', '#b45309'],
   done:    ['✅ Done',    '#dbeafe', '#1d4ed8'],
-  draft:   ['📝 Draft',   '#f1f5f9', '#475569']
+  draft:   ['📝 Draft',   '#f1f5f9', '#475569'],
+  scheduled: ['📅 Scheduled', '#ede9fe', '#6d28d9']
 };
+const CP_REPEAT = { once: 'Ek baar', daily: 'Roz', weekly: 'Har hafte', monthly: 'Har mahine' };
+// Aaj ki date + chuna hua "HH:MM" (local) → ms — repeat ka anchor
+function cpAnchorFromTime(hhmm) {
+  const [h, m] = String(hhmm || '10:00').split(':').map(Number);
+  const d = new Date(); d.setHours(h || 0, m || 0, 0, 0);
+  return d.getTime();
+}
+// Server ke cpNextRun jaisa — preview me "agla run" dikhane ke liye
+function cpNextRunAt(anchor, mode, after) {
+  const a = new Date(anchor);
+  if (mode === 'monthly') {
+    for (let k = 1; k < 1200; k++) {
+      const lastDay = new Date(Date.UTC(a.getUTCFullYear(), a.getUTCMonth() + k + 1, 0)).getUTCDate();
+      const t = Date.UTC(a.getUTCFullYear(), a.getUTCMonth() + k, Math.min(a.getUTCDate(), lastDay), a.getUTCHours(), a.getUTCMinutes());
+      if (t > after) return t;
+    }
+  }
+  const step = (mode === 'weekly' ? 7 : 1) * 86400000;
+  return anchor + Math.max(1, Math.ceil((after - anchor + 1) / step)) * step;
+}
+function cpFmtMs(ms) { return ms ? new Date(ms).toLocaleString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', hour: 'numeric', minute: '2-digit' }) : '—'; }
 function cpStatusChip(s) { const [t, bg, c] = CP_STATUS[s] || CP_STATUS.draft; return `<span class="ow-pill" style="background:${bg};color:${c}">${t}</span>`; }
 function cpFmtDur(sec) {
   sec = Math.max(0, Math.round(sec));
@@ -6016,6 +6085,7 @@ async function loadCampaigns() {
   _cpCfg = d;
   _cpList = d.campaigns || [];
   document.getElementById('cpGapLbl').textContent = d.gap_sec;
+  document.getElementById('cpCronUrl').value = d.cron_url || 'Cron link nahi ban paaya (App_Settings table check karo)';
   cpRenderHistory();
   cpRenderNumbers();
   cpRenderMedia();
@@ -6079,15 +6149,23 @@ function cpRenderPreview() {
 
 function cpRenderSummary() {
   const n = _cpNumbers.length, gap = _cpCfg.gap_sec || 55;
+  const mode = document.getElementById('cpRepeat').value;
+  const repeating = mode !== 'once';
+  document.getElementById('cpRepeatTimeWrap').style.display = repeating ? '' : 'none';
+  document.querySelector('.cp-repeat').classList.toggle('once', !repeating);
   const att = _cpMedia ? (_cpMedia.type === 'pdf' ? '📄 PDF' : '🖼️ Image') : '—';
   let html = `<div>Numbers<b>${n}</b></div><div>Har message ke beech<b>${gap} sec</b></div>
-    <div>Total time (approx)<b>${n ? cpFmtDur((n - 1) * gap) : '—'}</b></div><div>Attachment<b>${att}</b></div>`;
+    <div>Ek run ka time (approx)<b>${n ? cpFmtDur((n - 1) * gap) : '—'}</b></div><div>Attachment<b>${att}</b></div>`;
+  if (repeating) {
+    const next = cpNextRunAt(cpAnchorFromTime(document.getElementById('cpRepeatTime').value), mode, Date.now());
+    html += `<div class="cp-sched">🔁 <b style="display:inline;font-size:inherit">${CP_REPEAT[mode]}</b> — pehla run abhi, agla <b style="display:inline;font-size:inherit">${cpFmtMs(next)}</b></div>`;
+  }
   if (n > 200) html += `<div class="cp-warn">⚠️ Waumfy plan me ek din me max 200 message jaate hain. Limit aate hi campaign khud pause ho jayega — agle din Resume karna.</div>`;
   document.getElementById('cpSummary').innerHTML = html;
   const btn = document.getElementById('cpSendBtn');
   if (btn.dataset.busy) return;
   btn.disabled = !!_cpRun;
-  btn.textContent = _cpRun ? '⏳ Ek campaign chal raha hai…' : `🚀 Send Campaign${n ? ' · ' + n + ' numbers' : ''}`;
+  btn.textContent = _cpRun ? '⏳ Ek campaign chal raha hai…' : `🚀 ${repeating ? 'Start ' + CP_REPEAT[mode] + ' Campaign' : 'Send Campaign'}${n ? ' · ' + n + ' numbers' : ''}`;
 }
 
 // ── Numbers list ──
@@ -6098,13 +6176,17 @@ function cpNorm(raw) {
   return d.length > 15 ? '' : d;
 }
 // Har line: "9876543210" · "9876543210, Rahul" · "Rahul, 9876543210" · "98…, 98…, 98…"
+// Excel CSV save karte waqt lambe number "9.19877E+11" bana deta hai — asli digits kho jaate hain
+const CP_SCI_RE = /^\d(\.\d+)?e\+?\d+$/i;
 function cpParseText(text) {
   const out = [];
-  String(text || '').split(/\r?\n/).forEach(line => {
+  String(text || '').replace(/^﻿/, '').split(/\r?\n/).forEach(line => {
     const parts = line.split(/[,;\t|]+/).map(s => s.trim().replace(/^"|"$/g, '')).filter(Boolean);
+    const sci = parts.filter(p => CP_SCI_RE.test(p));
     // Letters wala hissa naam, sirf digits/symbols wala number (chhota ho toh aage "galat" ginega)
     const nums = parts.filter(p => /\d/.test(p) && !/\p{L}/u.test(p));
-    const names = parts.filter(p => /\p{L}/u.test(p));
+    const names = parts.filter(p => /\p{L}/u.test(p) && !CP_SCI_RE.test(p));
+    sci.forEach(s => out.push({ raw: s, name: '', sci: true }));
     if (nums.length === 1) out.push({ raw: nums[0], name: names[0] || '' });
     else nums.forEach(n => out.push({ raw: n, name: '' }));
   });
@@ -6112,8 +6194,9 @@ function cpParseText(text) {
 }
 function cpAddParsed(items) {
   const have = new Set(_cpNumbers.map(n => n.phone)), max = _cpCfg.max_numbers || 500;
-  let added = 0, dup = 0, bad = 0, over = 0;
+  let added = 0, dup = 0, bad = 0, over = 0, sci = 0;
   for (const it of items) {
+    if (it.sci) { sci++; continue; }
     const p = cpNorm(it.raw);
     if (!p) { bad++; continue; }
     if (have.has(p)) { dup++; continue; }
@@ -6126,10 +6209,39 @@ function cpAddParsed(items) {
   if (dup) msg.push(`${dup} duplicate skip`);
   if (bad) msg.push(`${bad} galat number`);
   if (over) msg.push(`${over} limit (${max}) se bahar`);
+  if (sci) msg.push(`⚠️ ${sci} number Excel ne bigaad diye (jaise 9.19E+11) — Excel file (.xlsx) seedha upload karo`);
   document.getElementById('cpNumMsg').textContent = items.length ? msg.join(' · ') : 'Koi number nahi mila';
   cpRenderNumbers();
   cpRenderPreview();
   return added;
+}
+// Template: phone + name column — Excel me khol ke bharo, CSV ya .xlsx dono upload ho jaate hain
+function cpSampleCsv() {
+  return '﻿' + [
+    'phone,name',
+    '9876543210,Rahul',
+    '9123456780,Priya',
+    '9988776655,'
+  ].join('\r\n') + '\r\n';
+}
+function cpDownloadSample() {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([cpSampleCsv()], { type: 'text/csv;charset=utf-8' }));
+  a.download = 'campaign-numbers-sample.csv';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  showToast('⬇️ Sample CSV download ho gaya — numbers bharke "CSV / Excel upload" se daalo');
+}
+// SheetJS sirf .xlsx upload pe load hota hai
+function cpLoadSheetJs() {
+  if (window.XLSX) return Promise.resolve(window.XLSX);
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload = () => resolve(window.XLSX);
+    s.onerror = () => reject(new Error('Excel reader load nahi hua — internet check karo ya CSV upload karo'));
+    document.head.appendChild(s);
+  });
 }
 function cpAddNumbers() {
   const ta = document.getElementById('cpNumInput');
@@ -6141,7 +6253,18 @@ async function cpImportFile(input) {
   input.value = '';
   if (!f) return;
   if (f.size > 2 * 1024 * 1024) return showToast('File 2MB se chhoti honi chahiye', 'error');
-  cpAddParsed(cpParseText(await f.text()));
+  try {
+    if (/\.xlsx?$/i.test(f.name)) {
+      const XLSX = await cpLoadSheetJs();
+      const wb = XLSX.read(await f.arrayBuffer(), { type: 'array' });
+      // rawNumbers: 919876543210 poora number aaye, "9.19E+11" nahi
+      cpAddParsed(cpParseText(XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]], { rawNumbers: true })));
+    } else {
+      cpAddParsed(cpParseText(await f.text()));
+    }
+  } catch (e) {
+    showToast('⚠️ File padh nahi paaya: ' + e.message, 'error');
+  }
 }
 function cpClearNumbers() {
   if (_cpNumbers.length && !confirm(`List ke saare ${_cpNumbers.length} numbers hata dein?`)) return;
@@ -6238,12 +6361,17 @@ async function cpStart() {
   if (msg.length > limit) return showToast(`Message ${limit} characters se chhota karo${_cpMedia ? ' (attachment ke saath caption max 1024)' : ''}`, 'error');
   if (!_cpNumbers.length) return showToast('Numbers list khaali hai', 'error');
   const n = _cpNumbers.length, gap = _cpCfg.gap_sec || 55;
-  if (!confirm(`${n} number${n > 1 ? 's' : ''} ko ye message jayega.\nHar message ke beech ${gap} sec — total lagbhag ${cpFmtDur((n - 1) * gap)}.\n\nSending ke dauraan ye tab khula rakhna. Shuru karein?`)) return;
+  const repeat = document.getElementById('cpRepeat').value;
+  const anchorAt = cpAnchorFromTime(document.getElementById('cpRepeatTime').value);
+  const repeatTxt = repeat === 'once' ? ''
+    : `\n\n🔁 ${CP_REPEAT[repeat]} repeat — pehla run abhi, agla ${cpFmtMs(cpNextRunAt(anchorAt, repeat, Date.now()))}.`;
+  if (!confirm(`${n} number${n > 1 ? 's' : ''} ko ye message jayega.\nHar message ke beech ${gap} sec — total lagbhag ${cpFmtDur((n - 1) * gap)}.${repeatTxt}\n\nSending ke dauraan ye tab khula rakhna. Shuru karein?`)) return;
   const btn = document.getElementById('cpSendBtn');
   btn.disabled = true; btn.dataset.busy = '1'; btn.textContent = '⏳ Campaign bana raha hoon…';
   const r = await api('/api/campaigns', 'POST', {
     name: document.getElementById('cpName').value.trim(), message: msg,
-    mediaFileId: _cpMedia?.fileId || '', mediaName: _cpMedia?.name || '', numbers: _cpNumbers
+    mediaFileId: _cpMedia?.fileId || '', mediaName: _cpMedia?.name || '', numbers: _cpNumbers,
+    repeat, anchorAt
   });
   delete btn.dataset.busy;
   if (!r || r.error) { showToast('⚠️ ' + (r?.error || 'Campaign nahi bana'), 'error'); cpRenderSummary(); return; }
@@ -6284,7 +6412,10 @@ async function cpStep() {
     cpSetNote(`⚠️ ${r?.error || 'Network error'} — 15 sec me dobara try`);
     return cpSchedule(15);
   }
-  if (r.result) cpApplyResult(r.result);
+  // Repeat ka naya run shuru hua → saare numbers dobara pending, log table fresh lao
+  if (_cpLive && _cpLive.id === run.id && r.campaign.run_count !== _cpLive.run_count) await cpShowLive(run.id);
+  else if (r.result) cpApplyResult(r.result);
+  if (_cpRun !== run) return;
   cpApplyCampaign(r.campaign);
   if (r.campaign.status !== 'running') return cpStopRun(r.campaign);
   cpSchedule(r.wait != null ? r.wait : (r.campaign.next_in || _cpCfg.gap_sec));
@@ -6304,8 +6435,11 @@ function cpStopRun(c) {
   cpNavDot(false);
   cpWakeLock(false);
   if (c && c.status === 'done') showToast(`🎉 Campaign complete — ${c.sent} sent${c.failed ? ', ' + c.failed + ' failed' : ''}`);
+  else if (c && c.status === 'scheduled') showToast(`✅ Run poora — ${c.sent} sent · agla run ${cpFmtMs(c.next_run_at)}`);
   else if (c && c.status === 'paused' && c.last_error) showToast('⏸ Campaign ruk gaya: ' + c.last_error, 'error');
-  if (_cpLive) cpApplyCampaign(_cpLive);
+  // Run khatam → fresh detail (runs history ke saath); warna sirf buttons/state update
+  if (_cpLive && c && _cpLive.id === c.id) cpShowLive(c.id);
+  else if (_cpLive) cpApplyCampaign(_cpLive);
   cpRenderSummary();
   cpRefreshHistory();
 }
@@ -6354,6 +6488,7 @@ function cpRenderLive() {
     </div>
     <div class="cp-actions" id="cpLiveActions"></div>
     <div id="cpLiveMsg"></div>
+    <div id="cpLiveRuns"></div>
     <div class="cp-log">
       <table class="ow-tbl">
         <thead><tr><th>#</th><th>Number</th><th>Naam</th><th>Status</th><th>Time</th></tr></thead>
@@ -6381,13 +6516,24 @@ function cpApplyCampaign(c) {
   const close = document.getElementById('cpLiveClose');
   if (close) close.style.display = driving ? 'none' : '';
 
+  const repeating = L.repeat_mode && L.repeat_mode !== 'once';
   const btns = [];
   if (driving) btns.push(`<button class="btn btn-yellow btn-sm" onclick="cpAction(${L.id},'pause')">⏸ Pause</button>`);
   else if (L.status === 'running') btns.push(`<button class="btn btn-green btn-sm" onclick="cpRunCampaign(${L.id})">▶ Continue sending</button>`, `<button class="btn btn-outline btn-sm" onclick="cpAction(${L.id},'pause')">⏸ Pause</button>`);
   else if (L.status === 'paused' || L.status === 'draft') btns.push(`<button class="btn btn-green btn-sm" onclick="cpAction(${L.id},'resume')">▶ Resume</button>`);
+  else if (L.status === 'scheduled') btns.push(`<button class="btn btn-green btn-sm" onclick="cpAction(${L.id},'run-now')">▶ Abhi bhejo</button>`, `<button class="btn btn-outline btn-sm" onclick="cpAction(${L.id},'pause')">⏸ Pause</button>`);
   if (!driving && L.failed && L.status !== 'running') btns.push(`<button class="btn btn-outline btn-sm" onclick="cpAction(${L.id},'retry')">🔁 Retry failed (${L.failed})</button>`);
+  if (repeating) btns.push(`<button class="btn btn-outline btn-sm" style="color:#dc2626;border-color:#fecaca" onclick="cpAction(${L.id},'stop-repeat')">⏹ Repeat band karo</button>`);
   const acts = document.getElementById('cpLiveActions');
   if (acts) acts.innerHTML = btns.join('');
+
+  const runsBox = document.getElementById('cpLiveRuns');
+  if (runsBox) {
+    const runs = (L.runs || []).slice(-8).reverse();
+    runsBox.innerHTML = repeating || runs.length > 1
+      ? `<div class="cp-runs"><span style="background:#f5f3ff;border-color:#ddd6fe;color:#6d28d9;font-weight:700">🔁 ${CP_REPEAT[L.repeat_mode] || 'Ek baar'} · Run #${L.run_count}</span>${runs.map(r => `<span>${cpFmtMs(r.at)} · ✅ ${r.sent}${r.failed ? ' · ❌ ' + r.failed : ''}</span>`).join('')}</div>`
+      : '';
+  }
 
   const msgBox = document.getElementById('cpLiveMsg');
   if (msgBox) msgBox.innerHTML = L.last_error
@@ -6395,7 +6541,10 @@ function cpApplyCampaign(c) {
     : (!driving && L.status === 'running')
       ? `<div class="cp-info">Ye campaign chal raha tha par is tab me sending band hai (tab band / refresh hua tha). "▶ Continue sending" dabao.</div>`
       : '';
-  if (!driving) cpSetNote(L.status === 'done' ? `Poora ho gaya · ${cpFmtWhen(L.updated_at)}` : L.status === 'paused' ? 'Paused — Resume dabao' : '');
+  if (!driving) cpSetNote(
+    L.status === 'done' ? `Poora ho gaya · ${cpFmtWhen(L.updated_at)}`
+    : L.status === 'scheduled' ? `📅 Agla run: ${cpFmtMs(L.next_run_at)} (${CP_REPEAT[L.repeat_mode]})`
+    : L.status === 'paused' ? 'Paused — Resume dabao' : '');
   cpUpdateRing();
 }
 
@@ -6435,7 +6584,7 @@ function cpUpdateRing() {
   const run = _cpRun && _cpRun.id === _cpLive.id ? _cpRun : null;
   if (!run) {
     fg.style.strokeDashoffset = _cpLive.status === 'done' ? 0 : CP_RING;
-    txt.textContent = _cpLive.status === 'done' ? '✓' : _cpLive.status === 'paused' ? '⏸' : '—';
+    txt.textContent = { done: '✓', paused: '⏸', scheduled: '📅' }[_cpLive.status] || '—';
     return;
   }
   if (run.sending || !run.nextAt) {
@@ -6458,7 +6607,10 @@ async function cpAction(id, action) {
     if (_cpRun && _cpRun.id === id) cpStopRun(null);
     showToast('⏸ Campaign paused');
     await cpShowLive(id);
-  } else if (r.campaign.status === 'running') {
+  } else if (action === 'stop-repeat') {
+    showToast('⏹ Repeat band — ye campaign aage apne aap nahi chalega');
+    await cpShowLive(id);
+  } else if (action === 'run-now' || r.campaign.status === 'running') {
     if (_cpRun && _cpRun.id === id) cpStopRun(null);
     await cpRunCampaign(id);
   } else {
@@ -6490,7 +6642,8 @@ function cpRenderHistory() {
         <div style="display:flex;align-items:center;gap:7px"><div class="ow-bar" style="flex:1"><div style="width:${pct}%"></div></div><span style="font-size:11px;font-weight:700;color:#64748b;white-space:nowrap">${c.sent}/${c.total}</span></div>
         ${c.failed ? `<div style="font-size:11px;color:#dc2626;font-weight:600;margin-top:3px">${c.failed} failed</div>` : ''}
       </td>
-      <td>${cpStatusChip(c.status)}</td>
+      <td>${cpStatusChip(c.status)}${c.repeat_mode && c.repeat_mode !== 'once'
+        ? `<div class="cp-hint" style="margin-top:4px;white-space:nowrap">🔁 ${CP_REPEAT[c.repeat_mode]} · run #${c.run_count}${c.status === 'scheduled' ? '<br>agla ' + cpFmtMs(c.next_run_at) : ''}</div>` : ''}</td>
       <td style="white-space:nowrap;text-align:right">
         <button class="action-btn edit" onclick="cpShowLive(${c.id}, true)">👁 View</button>
         <button class="action-btn revise" onclick="cpReuse(${c.id})">♻️ Reuse</button>
@@ -6505,6 +6658,7 @@ function cpReuse(id) {
   cpRemoveMedia();
   document.getElementById('cpName').value = c.name + ' (copy)';
   document.getElementById('cpMsg').value = c.message || '';
+  document.getElementById('cpRepeat').value = c.repeat_mode || 'once';
   if (c.media_file_id) {
     _cpMedia = { fileId: c.media_file_id, type: c.media_type, name: c.media_name || c.media_type,
       size: 0, previewUrl: c.media_type === 'image' ? '/f/' + c.media_file_id : '', done: true, reused: true };
@@ -6526,6 +6680,35 @@ async function cpDelete(id) {
 }
 
 function cpNavDot(on) { ['nav-campaign', 'mob-campaign'].forEach(id => document.getElementById(id)?.classList.toggle('cp-on', on)); }
+
+function cpCopyCron() {
+  const inp = document.getElementById('cpCronUrl');
+  if (!/^https?:/.test(inp.value)) return showToast('Cron link abhi nahi hai', 'error');
+  (navigator.clipboard ? navigator.clipboard.writeText(inp.value) : Promise.reject())
+    .then(() => showToast('📋 Cron link copy ho gaya'))
+    .catch(() => { inp.select(); document.execCommand('copy'); showToast('📋 Cron link copy ho gaya'); });
+}
+
+// Admin ke liye har minute check: koi campaign "running" hai par kahin chal nahi raha,
+// ya daily/weekly/monthly run ka time aa gaya → isi tab se bhejna shuru (cron na ho tab bhi)
+let _cpPollT = 0;
+function cpStartAutoPoll() {
+  if (_cpPollT || ME.role !== 'admin') return;
+  const tick = async () => {
+    if (_cpRun) return;
+    const d = await _apiFetch('/api/campaigns', 'GET', null, 1);   // cache bypass
+    if (!d || d.error || _cpRun) return;
+    const now = Date.now();
+    const due = (d.campaigns || []).find(c => c.status === 'running' || (c.status === 'scheduled' && c.next_run_at && c.next_run_at <= now));
+    if (!due) return;
+    _cpCfg = d;
+    _cpList = d.campaigns || [];
+    showToast(`📣 "${due.name}" ${due.status === 'scheduled' ? 'ka time ho gaya' : 'adhoora tha'} — bhejna shuru kar raha hoon`);
+    cpRunCampaign(due.id);
+  };
+  _cpPollT = setInterval(tick, 60000);
+  setTimeout(tick, 4000);
+}
 // Sending ke dauraan screen sleep na ho (jahan browser support kare)
 async function cpWakeLock(on) {
   try {
