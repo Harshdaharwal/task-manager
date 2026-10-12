@@ -1642,8 +1642,8 @@ button:disabled{opacity:.65;cursor:not-allowed !important;}
     <div class="page-header">
       <h2>📣 WhatsApp Campaign</h2>
       <div class="cp-limits">
-        <span>⏱ <b id="cpGapLbl">55</b> sec gap</span>
-        <span title="Waumfy plan limits">📊 30 / ghanta · 200 / din</span>
+        <span>⏱ <b id="cpGapLbl">60</b> sec gap</span>
+        <span title="ZWhatsapp number limits — inse upar ke messages ZWhatsapp apni line me rakh ke baad me bhejta hai" id="cpLimitLbl">📊 26 / ghanta · 100 / din</span>
       </div>
     </div>
 
@@ -6024,11 +6024,11 @@ async function deleteCatalogue(id) {
 
 // ══════════════════════════════════════════════════════
 // WHATSAPP CAMPAIGN — template (text + image/PDF) → number list.
-// Server har /send-next call pe EK message bhejta hai aur 55s gap khud
+// Server har /send-next call pe EK message bhejta hai aur 60s gap khud
 // enforce karta hai; ye tab loop chalata hai, isliye sending ke dauraan tab
 // khula rehna chahiye (band hua toh wapas aakar "Continue").
 // ══════════════════════════════════════════════════════
-let _cpCfg = { gap_sec: 55, max_numbers: 500, country_code: '91' };
+let _cpCfg = { gap_sec: 60, max_numbers: 500, country_code: '91' };
 let _cpList = [];        // history
 let _cpNumbers = [];     // composer list: [{ phone, name }]
 let _cpMedia = null;     // { fileId, type, name, size, previewUrl, progress, done, reused }
@@ -6085,6 +6085,8 @@ async function loadCampaigns() {
   _cpCfg = d;
   _cpList = d.campaigns || [];
   document.getElementById('cpGapLbl').textContent = d.gap_sec;
+  const lim = d.wa_limits;
+  if (lim && lim.maxMessagesPerHour) document.getElementById('cpLimitLbl').textContent = `📊 ${lim.maxMessagesPerHour} / ghanta · ${lim.maxMessagesPerDay} / din`;
   document.getElementById('cpCronUrl').value = d.cron_url || 'Cron link nahi ban paaya (App_Settings table check karo)';
   cpRenderHistory();
   cpRenderNumbers();
@@ -6148,7 +6150,7 @@ function cpRenderPreview() {
 }
 
 function cpRenderSummary() {
-  const n = _cpNumbers.length, gap = _cpCfg.gap_sec || 55;
+  const n = _cpNumbers.length, gap = _cpCfg.gap_sec || 60;
   const mode = document.getElementById('cpRepeat').value;
   const repeating = mode !== 'once';
   document.getElementById('cpRepeatTimeWrap').style.display = repeating ? '' : 'none';
@@ -6360,7 +6362,7 @@ async function cpStart() {
   const limit = _cpMedia ? 1024 : 4096;
   if (msg.length > limit) return showToast(`Message ${limit} characters se chhota karo${_cpMedia ? ' (attachment ke saath caption max 1024)' : ''}`, 'error');
   if (!_cpNumbers.length) return showToast('Numbers list khaali hai', 'error');
-  const n = _cpNumbers.length, gap = _cpCfg.gap_sec || 55;
+  const n = _cpNumbers.length, gap = _cpCfg.gap_sec || 60;
   const repeat = document.getElementById('cpRepeat').value;
   const anchorAt = cpAnchorFromTime(document.getElementById('cpRepeatTime').value);
   const repeatTxt = repeat === 'once' ? ''

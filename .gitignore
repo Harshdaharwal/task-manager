@@ -22,6 +22,11 @@ whatsapp.config.js
 node_modules/
 package-lock.json
 
+# Python (assistant/) — virtualenv + bytecode
+.venv/
+__pycache__/
+*.pyc
+
 # ================================================================
 # Logs & temp
 # ================================================================
