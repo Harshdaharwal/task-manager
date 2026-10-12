@@ -689,6 +689,14 @@ const MYSQL_SCHEMA = {
     // Repeat: once | daily | weekly | monthly — anchor_at = pehla scheduled slot (ms), runs_json = har run ka summary
     repeat_mode: "VARCHAR(10) DEFAULT 'once'", anchor_at: "VARCHAR(20) DEFAULT '0'",
     next_run_at: "VARCHAR(20) DEFAULT '0'", run_count: "VARCHAR(10) DEFAULT '1'", runs_json: "TEXT"
+  },
+  // WhatsApp outbox — delegation / checklist / reminder messages yahan line lagate hain,
+  // waPump har 60s me EK bhejta hai. status: p = pending, s = sent (API ne queue kiya), f = failed
+  WA_Outbox: {
+    phone: "VARCHAR(20) DEFAULT ''", message: "TEXT", kind: "VARCHAR(20) DEFAULT ''",
+    status: "VARCHAR(2) DEFAULT 'p'", tries: "VARCHAR(5) DEFAULT '0'", last_error: "TEXT",
+    ikey: "VARCHAR(40) DEFAULT ''", message_id: "VARCHAR(60) DEFAULT ''",
+    created_at: "VARCHAR(40) DEFAULT ''", sent_at: "VARCHAR(40) DEFAULT ''"
   }
 };
 
@@ -888,7 +896,8 @@ async function deleteRow(tabName, id) {
 const EXTRA_SHEET_TABS = {
   Leaves: ['id','user_id','from_date','to_date','leave_type','reason','status','decided_by','decided_at','created_at'],
   Help_Slips: ['id','user_id','category','urgency','details','status','resolution','resolved_by','resolved_at','created_at'],
-  Campaigns: ['id','name','message','media_type','media_name','media_file_id','media_link','recipients_json','status','last_sent_at','last_error','created_by','created_at','updated_at','repeat_mode','anchor_at','next_run_at','run_count','runs_json']
+  Campaigns: ['id','name','message','media_type','media_name','media_file_id','media_link','recipients_json','status','last_sent_at','last_error','created_by','created_at','updated_at','repeat_mode','anchor_at','next_run_at','run_count','runs_json'],
+  WA_Outbox: ['id','phone','message','kind','status','tries','last_error','ikey','message_id','created_at','sent_at']
 };
 async function ensureSheetTabs(sheetsApi) {
   const meta = await withRetry(() => sheetsApi.spreadsheets.get({
@@ -1098,7 +1107,7 @@ function reminderScheduler() {
 }
 
 // ══════════════════════════════════════════════════════
-// WHATSAPP  (Aumpfy custom trigger API)
+// WHATSAPP  (ZWhatsapp API — POST /api/v1/messages/{text|image|document})
 // ══════════════════════════════════════════════════════
 // Sends task alerts + daily reminders to each user's WhatsApp number.
 // Configure via .env — defaults below let it work out of the box.
@@ -1125,8 +1134,8 @@ function normalizePhone(raw) {
 }
 
 // WhatsApp config DB se bhi aa sakta hai (App_Settings: wa_enabled, wa_url,
-// wa_api_key) — isse har deployment (koi bhi URL) par bina env vars ke chalta
-// hai. DB values env/file config ko override karti hain. 60s cache.
+// wa_api_key, wa_session_id) — isse har deployment (koi bhi URL) par bina env
+// vars ke chalta hai. DB values env/file config ko override karti hain. 60s cache.
 let _waDbCfg = { data: null, ts: 0 };
 async function getWaDbConfig() {
   if (_waDbCfg.data && Date.now() - _waDbCfg.ts < 60000) return _waDbCfg.data;
@@ -1140,46 +1149,195 @@ async function getWaDbConfig() {
   } catch (e) { return _waDbCfg.data || {}; }
 }
 
-// WhatsApp send. Never throws — logs and returns a status object.
-// media (optional): { type: 'image'|'pdf', url | base64, filename } — Waumfy me
-// file media_url/media_base64 se jaati hai aur text "caption" ban jaata hai.
-async function sendWhatsApp(rawPhone, message, media) {
+async function waConfig() {
   const dbCfg = await getWaDbConfig();
-  const enabled = (dbCfg.wa_enabled !== undefined && dbCfg.wa_enabled !== '')
-    ? String(dbCfg.wa_enabled).toLowerCase() === 'true' : WA.enabled;
-  const url = dbCfg.wa_url || WA.url;
-  const apiKey = dbCfg.wa_api_key || WA.apiKey;
-  if (!enabled) return { skipped: 'disabled' };
+  return {
+    enabled: (dbCfg.wa_enabled !== undefined && dbCfg.wa_enabled !== '')
+      ? String(dbCfg.wa_enabled).toLowerCase() === 'true' : WA.enabled,
+    baseUrl: String(dbCfg.wa_url || WA.baseUrl || '').replace(/\/+$/, ''),
+    apiKey: dbCfg.wa_api_key || WA.apiKey,
+    sessionId: dbCfg.wa_session_id || WA.sessionId
+  };
+}
+
+// ── API gate: ZWhatsapp key par 1 request / minute ki limit hai (aur number par
+// min 60s gap). Isliye HAR API call — task message, campaign, startup check —
+// isi gate se guzarti hai: ek call ke baad WA.gapSec (60s) + thoda margin tak
+// agli call nahi jaati. Isi se "ek message ke baad 60 sec" bhi pakka hota hai.
+let _waNextFree = 0;
+const waGapMs = () => (WA.gapSec || 60) * 1000 + 1500;
+function waGateWaitMs() { return Math.max(0, _waNextFree - Date.now()); }
+function waGateTake() { _waNextFree = Date.now() + waGapMs(); }
+// 429 → API jitna bole (Retry-After) utna ruko, kam se kam ek poora gap
+function waGateBackoff(resp) {
+  const ra = parseInt(resp && resp.headers && resp.headers.get('retry-after')) || 0;
+  _waNextFree = Math.max(_waNextFree, Date.now() + Math.max(ra * 1000, waGapMs()));
+}
+const waBusy = () => ({ skipped: 'busy', wait: Math.ceil(waGateWaitMs() / 1000) });
+
+// sessionId (sess_…) set na ho → account ka pehla chalu number (ACTIVE pehle). 5 min cache.
+// Returns { id } | { skipped } | { ok: false, status, body } (API error)
+const WA_SENDABLE = ['ACTIVE', 'CONNECTING', 'RATE_LIMITED', 'DISCONNECTED', 'WEBHOOK_ERROR'];
+let _waSession = { id: '', key: '', ts: 0 };
+async function waResolveSession(cfg, force) {
+  if (cfg.sessionId) return { id: cfg.sessionId };
+  if (!force && _waSession.id && _waSession.key === cfg.apiKey && Date.now() - _waSession.ts < 300000) return { id: _waSession.id };
+  if (waGateWaitMs() > 0) return waBusy();
+  waGateTake();
+  const resp = await fetch(`${cfg.baseUrl}/api/v1/sessions`, {
+    headers: { Authorization: `Bearer ${cfg.apiKey}` },
+    signal: AbortSignal.timeout(WA.timeoutMs || 10000)
+  });
+  const body = await resp.text();
+  if (resp.status === 429) waGateBackoff(resp);
+  if (!resp.ok) return { ok: false, status: resp.status, body };
+  let list = [];
+  try { list = JSON.parse(body).data || []; } catch (e) {}
+  const pick = list.find(s => s.status === 'ACTIVE') || list.find(s => WA_SENDABLE.includes(s.status));
+  if (!pick) return { skipped: 'no-session', sessions: list.map(s => `${s.id} (${s.status})`) };
+  _waSession = { id: pick.id, key: cfg.apiKey, ts: Date.now(), status: pick.status, phone: pick.phoneNumber || '' };
+  return { id: pick.id };
+}
+
+// EK message abhi bhejo (gate khula ho to). Never throws — status object deta hai.
+// Gate band ho → { skipped: 'busy', wait } — caller baad me dobara try kare.
+// media (optional): { type: 'image'|'pdf', url | data (Buffer), mime, filename } —
+// public URL ho to API khud download karti hai, warna bytes multipart file me jaate hain.
+// opts.idempotencyKey: retry par wahi message dobara na jaye (API purana hi lauta deti hai).
+async function sendWhatsApp(rawPhone, message, media, opts = {}) {
+  const cfg = await waConfig();
+  if (!cfg.enabled) return { skipped: 'disabled' };
   const phone = normalizePhone(rawPhone);
   if (!phone) return { skipped: 'no-phone' };
-  if (!url || !apiKey) return { skipped: 'not-configured' };
-  const payload = { [WA.phoneField || 'to']: phone };
+  if (!cfg.baseUrl || !cfg.apiKey) return { skipped: 'not-configured' };
+  let sess;
+  try { sess = await waResolveSession(cfg); }
+  catch (err) { return { ok: false, error: err.message }; }
+  if (!sess.id) return sess;
+  if (waGateWaitMs() > 0) return waBusy();
+
+  const fields = { sessionId: sess.id, to: phone };
+  if (opts.idempotencyKey) fields.idempotencyKey = opts.idempotencyKey;
+  const headers = { Authorization: `Bearer ${cfg.apiKey}` };
+  let path = '/api/v1/messages/text', body;
   if (media) {
-    payload.type = media.type;
-    if (media.url) payload.media_url = media.url; else payload.media_base64 = media.base64;
-    if (media.filename) payload.filename = media.filename;
-    if (message) payload.caption = message;
-  } else {
-    payload[WA.messageField || 'text'] = message;
-  }
-  try {
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', [WA.authHeader || 'x-api-key']: apiKey },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(WA.timeoutMs || 20000)
-    });
-    const body = await resp.text();
-    if (!resp.ok) {
-      console.error(`  WhatsApp failed (${phone}) [${resp.status}]: ${body.slice(0, 200)}`);
-      return { ok: false, status: resp.status, body };
+    path = media.type === 'image' ? '/api/v1/messages/image' : '/api/v1/messages/document';
+    if (message) fields.caption = message;
+    if (media.type !== 'image' && media.filename) fields.fileName = media.filename;
+    if (media.url) {
+      headers['Content-Type'] = 'application/json';
+      body = JSON.stringify({ ...fields, url: media.url });
+    } else {
+      body = new FormData();
+      for (const [k, v] of Object.entries(fields)) body.append(k, v);
+      body.append('file', new Blob([media.data], { type: media.mime || 'application/octet-stream' }), media.filename || 'file');
     }
-    console.log(`  WhatsApp sent to ${phone}`);
-    return { ok: true, status: resp.status, body };
+  } else {
+    headers['Content-Type'] = 'application/json';
+    body = JSON.stringify({ ...fields, message });
+  }
+  waGateTake();
+  try {
+    const resp = await fetch(cfg.baseUrl + path, {
+      method: 'POST', headers, body,
+      signal: AbortSignal.timeout(WA.timeoutMs || 10000)
+    });
+    const text = await resp.text();
+    let j = {};
+    try { j = JSON.parse(text); } catch (e) {}
+    if (!resp.ok || j.success === false) {
+      if (resp.status === 429) waGateBackoff(resp);
+      if (!cfg.sessionId && [404, 409, 410].includes(resp.status)) _waSession.ts = 0;   // number hata / unlink — agli baar dobara dhundo
+      console.error(`  WhatsApp failed (${phone}) [${resp.status}]: ${text.slice(0, 200)}`);
+      return { ok: false, status: resp.status, body: text };
+    }
+    console.log(`  WhatsApp sent → ${phone} (${j.status || (j.data && j.data.status) || 'QUEUED'})`);
+    return { ok: true, status: resp.status, body: text, messageId: j.messageId || (j.data && j.data.messageId) || '' };
   } catch (err) {
     console.error(`  WhatsApp error (${phone}): ${err.message}`);
     return { ok: false, error: err.message };
   }
+}
+
+// ── Outbox: task messages (delegation / checklist / reminder) DB me line lagate
+// hain; waPump gate khulte hi EK bhejta hai. Request turant lautti hai, aur server
+// restart ho jaye to bhi pending messages DB me bache rehte hain.
+async function queueWhatsApp(rawPhone, message, kind) {
+  const cfg = await waConfig();
+  if (!cfg.enabled) return { skipped: 'disabled' };
+  const phone = normalizePhone(rawPhone);
+  if (!phone) return { skipped: 'no-phone' };
+  const d = await getDB();
+  const row = await d.insert('WA_Outbox', {
+    phone, message, kind: kind || '', status: 'p', tries: '0', last_error: '',
+    ikey: 'tm_' + require('crypto').randomBytes(12).toString('hex'), message_id: '',
+    created_at: new Date().toISOString().replace('T', ' ').split('.')[0], sent_at: ''
+  });
+  waPump().catch(() => {});   // gate khula ho to pehla message turant
+  return { queued: true, id: row.id };
+}
+
+async function waOutboxPending(d) {
+  if (d._invalidate) d._invalidate('WA_Outbox');
+  return (await d.findAll('WA_Outbox')).filter(r => r.status === 'p')
+    .sort((a, b) => (parseInt(a.id) || 0) - (parseInt(b.id) || 0));
+}
+
+// Rate limit / timeout / server dikkat → wahi message baad me dobara (max 5 baar)
+const waIsRateLimit = r => r.skipped === 'busy' || r.status === 429 || /RATE_LIMITED$/.test(waErrCode(r));
+const waIsRetryable = r => waIsRateLimit(r) || !!r.error || r.status >= 500 || waIsAccountError(r);
+
+let _waPumping = false;
+async function waPump() {
+  if (_waPumping || waGateWaitMs() > 0) return;
+  _waPumping = true;
+  try {
+    const d = await getDB();
+    const job = (await waOutboxPending(d))[0];
+    if (!job) return;
+    const r = await sendWhatsApp(job.phone, job.message, null, { idempotencyKey: job.ikey });
+    if (r.skipped === 'busy') return;   // line abhi bhari — agli baar
+    const tries = (parseInt(job.tries) || 0) + (waIsRateLimit(r) ? 0 : 1);
+    const stamp = new Date().toISOString().replace('T', ' ').split('.')[0];
+    if (r.ok) {
+      await d.update('WA_Outbox', job.id, { status: 's', tries: String(tries), sent_at: stamp, message_id: r.messageId || '', last_error: '' });
+    } else {
+      const retry = waIsRetryable(r) && tries < 5;
+      await d.update('WA_Outbox', job.id, { status: retry ? 'p' : 'f', tries: String(tries), last_error: waFailReason(r).slice(0, 300) });
+    }
+  } catch (e) { console.error('  WA outbox error:', e.message); }
+  finally { _waPumping = false; }
+}
+
+// Boot par ek baar: key sahi hai? kaunsa number se message jayega? — log me dikhe.
+// sessionId set ho tab bhi API se poochte hain, warna galat key par bhi "ready" dikhta.
+async function waStartupCheck() {
+  try {
+    const cfg = await waConfig();
+    if (!cfg.enabled || !cfg.apiKey) return;
+    if (waGateWaitMs() > 0) return;   // koi message pehle hi line me — check chhodo, limit bachao
+    if (cfg.sessionId) {
+      waGateTake();
+      const resp = await fetch(`${cfg.baseUrl}/api/v1/sessions/${encodeURIComponent(cfg.sessionId)}`, {
+        headers: { Authorization: `Bearer ${cfg.apiKey}` },
+        signal: AbortSignal.timeout(WA.timeoutMs || 10000)
+      });
+      const body = await resp.text();
+      if (resp.status === 429) {
+        waGateBackoff(resp);
+        return console.log('  ZWhatsapp check skipped — API limit (1 request/min), messages line me chalenge');
+      }
+      if (!resp.ok) return console.error(`  ZWhatsapp NOT ready: ${waFailReason({ status: resp.status, body })}`);
+      let d = {};
+      try { d = JSON.parse(body).data || {}; } catch (e) {}
+      const okStatus = WA_SENDABLE.includes(d.status);
+      console[okStatus ? 'log' : 'error'](`  ZWhatsapp ${okStatus ? 'ready' : 'NOT ready'} — number ${cfg.sessionId} (${d.phoneNumber || '?'}, ${d.status || '?'})${okStatus ? `, gap ${WA.gapSec || 60}s` : ' — dashboard me number link / reconnect karo'}`);
+      return;
+    }
+    const s = await waResolveSession(cfg, true);
+    if (s.id) console.log(`  ZWhatsapp ready — number ${s.id}${_waSession.phone ? ' (' + _waSession.phone + ', ' + _waSession.status + ')' : ''}, gap ${WA.gapSec || 60}s`);
+    else console.error(`  ZWhatsapp NOT ready: ${waFailReason(s)}${s.sessions && s.sessions.length ? ' — numbers: ' + s.sessions.join(', ') : ''}`);
+  } catch (e) { console.error('  ZWhatsapp check failed:', e.message); }
 }
 
 // Resolve a user's WhatsApp target ({ name, phone }) or null if no usable phone.
@@ -1281,10 +1439,10 @@ async function runWhatsAppReminders() {
       const phone = user && user.phone ? normalizePhone(user.phone) : '';
       if (!phone) { skipped++; continue; }
       const tasks = byUser[uid].sort((a, b) => (a.due_date || '').localeCompare(b.due_date || ''));
-      const r = await sendWhatsApp(phone, waReminderMsg(user.name, tasks, todayStr));
-      if (r.ok) sent++; else skipped++;
+      const r = await queueWhatsApp(phone, waReminderMsg(user.name, tasks, todayStr), 'reminder');
+      if (r.queued) sent++; else skipped++;
     }
-    console.log(`  WhatsApp reminder pass @ ${todayStr}: ${sent} sent, ${skipped} skipped`);
+    console.log(`  WhatsApp reminder pass @ ${todayStr}: ${sent} queued (60s gap se jayenge), ${skipped} skipped`);
     return { sent, skipped };
   } catch (err) {
     console.error('  runWhatsAppReminders error:', err.message);
@@ -1295,8 +1453,8 @@ async function runWhatsAppReminders() {
 let _lastWaReminderDate = '';
 function whatsAppReminderScheduler() {
   if (!WA.enabled) { console.log('  WhatsApp reminders disabled (WHATSAPP_ENABLED=false)'); return; }
-  if (!WA.url || !WA.apiKey) {
-    console.log('  WhatsApp NOT configured — add AUMPFY_API_URL and AUMPFY_API_KEY to .env, then restart');
+  if (!WA.baseUrl || !WA.apiKey) {
+    console.log('  WhatsApp NOT configured — add ZWA_API_KEY (aur ZWA_BASE_URL) to .env, then restart');
     return;
   }
   setInterval(async () => {
@@ -1668,18 +1826,19 @@ app.post('/api/tasks', requireAuth, async (req, res) => {
         frequency: '', last_reminder_date: '', created_at: nowStr
       });
       // Serverless-safe: Vercel jaise platforms response bhejte hi background
-      // kaam kill kar dete hain, isliye WhatsApp + email ko (parallel me)
-      // response se PEHLE complete hone dete hain.
+      // kaam kill kar dete hain, isliye email aur WhatsApp outbox entry ko
+      // (parallel me) response se PEHLE complete hone dete hain. WhatsApp
+      // outbox se 60s gap ke saath jaata hai.
       const assigner = await db.findOne('Users', { id: assignedBy });
       const assignerName = assigner?.name || 'Admin';
       await Promise.allSettled([
         getWhatsAppTarget(parseInt(targetUser)).then(waTarget => {
           if (!waTarget) return;
-          return sendWhatsApp(waTarget.phone, waDelegationMsg({
+          return queueWhatsApp(waTarget.phone, waDelegationMsg({
             assigneeName: waTarget.name, assignerName,
             desc, dueDate: date,
             priority: priority || 'low', approval: approval || 'no', remarks: remarks || ''
-          }));
+          }), 'delegation');
         }).catch(e => console.error('  WA notify error:', e.message)),
         getNotifyTarget(parseInt(targetUser)).then(target => {
           if (!target) return;
@@ -1700,13 +1859,13 @@ app.post('/api/tasks', requireAuth, async (req, res) => {
         due_date: date, status: 'pending', priority: priority || 'low',
         remarks: remarks || '', frequency: '', created_at: nowStr
       });
-      // Serverless-safe: response se pehle WhatsApp complete karo
+      // Serverless-safe: response se pehle WhatsApp outbox me daalo (60s gap se jayega)
       await (async () => {
         const waTarget = await getWhatsAppTarget(parseInt(targetUser));
         if (waTarget) {
-          await sendWhatsApp(waTarget.phone, waChecklistMsg({
+          await queueWhatsApp(waTarget.phone, waChecklistMsg({
             assigneeName: waTarget.name, desc, dueText: date, count: 1
-          }));
+          }), 'checklist');
         }
       })().catch(e => console.error('  WA notify error:', e.message));
     }
@@ -1732,7 +1891,7 @@ app.post('/api/tasks/bulk-checklist', requireAuth, requireAdmin, async (req, res
       remarks: remarks || '', frequency: freq, created_at: nowStr
     }));
     await db.batchInsert('Checklist_Tasks', rows);
-    // Serverless-safe: response se pehle WhatsApp complete karo
+    // Serverless-safe: response se pehle WhatsApp outbox me daalo (60s gap se jayega)
     await (async () => {
       const waTarget = await getWhatsAppTarget(parseInt(assignedTo));
       if (!waTarget) return;
@@ -1740,9 +1899,9 @@ app.post('/api/tasks/bulk-checklist', requireAuth, requireAdmin, async (req, res
       const dueText = cleanDates.length > 1
         ? `${cleanDates.length} dates (${sorted[0]} … ${sorted[sorted.length - 1]})`
         : sorted[0];
-      await sendWhatsApp(waTarget.phone, waChecklistMsg({
+      await queueWhatsApp(waTarget.phone, waChecklistMsg({
         assigneeName: waTarget.name, desc, dueText, count: cleanDates.length
-      }));
+      }), 'checklist');
     })().catch(e => console.error('  WA notify error:', e.message));
     res.json({ success: true, count: cleanDates.length });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -3510,13 +3669,14 @@ app.get('/f/:id', async (req, res) => {
 
 // ══════════════════════════════════════════════════════
 // WHATSAPP CAMPAIGNS — ek message (text + optional image/PDF) poori number
-// list ko, har message ke beech CAMPAIGN_GAP_SEC (default 55s) ka gap.
+// list ko, har message ke beech CAMPAIGN_GAP_SEC (default 60s) ka gap.
 // Browser tab sending chalata hai: har /send-next call pe server sirf EK
 // message bhejta hai (serverless timeout ke andar). Gap server-side enforce
-// hota hai, isliye do tab khule hon tab bhi 55s se pehle agla message nahi jata.
+// hota hai, isliye do tab khule hon tab bhi 60s se pehle agla message nahi jata.
+// Upar se sendWhatsApp ka global slot task messages ke saath bhi 60s rakhta hai.
 // Admin only.
 // ══════════════════════════════════════════════════════
-const CAMPAIGN_GAP_SEC = parseInt(process.env.CAMPAIGN_GAP_SEC) || 55;
+const CAMPAIGN_GAP_SEC = parseInt(process.env.CAMPAIGN_GAP_SEC) || WA.gapSec || 60;
 const CAMPAIGN_MAX_NUMBERS = 500;
 const CAMPAIGN_MEDIA = {
   'image/jpeg':      { type: 'image', max: 5 * 1024 * 1024,  ext: ['jpg', 'jpeg'] },
@@ -3660,15 +3820,24 @@ async function campaignSendNext(d, c) {
   const prevSent = parseInt(c.last_sent_at) || 0;
   const waitMs = prevSent + CAMPAIGN_GAP_SEC * 1000 - now;
   if (waitMs > 0) return { wait: Math.ceil(waitMs / 1000), campaign: cpPublic(c, false) };
+  // API gate (1 request/min, sab messages milake) — aur task messages pehle jaate hain
+  const gateWait = () => ({ wait: Math.max(5, Math.ceil(waGateWaitMs() / 1000) + 1), campaign: cpPublic(c, false) });
+  if (waGateWaitMs() > 0) return gateWait();
+  if ((await waOutboxPending(d)).length) { await waPump(); return gateWait(); }
   // Slot claim — doosra caller (tab / cron) isi waqt aaya toh use wait milega
   if (!(await cpCas(d, c.id, 'last_sent_at', c.last_sent_at ?? '', { last_sent_at: String(now) }))) {
     return { wait: 5, campaign: cpPublic(c, false) };
   }
 
   let r;
-  try { r = await sendWhatsApp(next.p, cpFillName(c.message, next.n), await campaignMediaPayload(c)); }
+  try { r = await sendWhatsApp(next.p, cpFillName(c.message, next.n), await campaignMediaPayload(c), { idempotencyKey: cpIkey(c, next) }); }
   catch (e) { r = { ok: false, error: e.message }; }
   now = Date.now();
+  // API limit / line busy → number pending hi rahe, gap ke baad dobara (pause nahi)
+  if (!r.ok && waIsRateLimit(r)) {
+    await d.update('Campaigns', c.id, { last_sent_at: String(prevSent), updated_at: cpStamp() });
+    return gateWait();
+  }
 
   const patch = { updated_at: cpStamp() };
   if (!r.ok && waIsAccountError(r)) {
@@ -3721,6 +3890,12 @@ function parseCampaignNumbers(items) {
   return { list, invalid, duplicates };
 }
 
+// Har run + number ka apna key — timeout ke baad retry par wahi message dobara nahi jata
+function cpIkey(c, rcpt) {
+  return 'cp_' + require('crypto').createHash('sha1')
+    .update(`${c.id}|${c.created_at}|${c.run_count || 1}|${rcpt.p}`).digest('hex').slice(0, 32);
+}
+
 // {{name}} → recipient ka naam; naam na ho toh placeholder (aage ka space bhi) hata do
 function cpFillName(msg, name) {
   return String(msg || '').replace(/\s?\{\{\s*name\s*\}\}/gi, m => name ? m.replace(/\{\{\s*name\s*\}\}/i, name) : '').trim();
@@ -3729,31 +3904,46 @@ function cpFillName(msg, name) {
 async function campaignMediaPayload(c) {
   if (!c.media_file_id) return null;
   const link = String(c.media_link || '');
-  // Public HTTPS link → Waumfy khud download kare (request chhoti, fast).
-  // Localhost/LAN pe Waumfy pahunch nahi sakta → file ke bytes bhejo.
+  // Public HTTPS link → ZWhatsapp khud download kare (request chhoti, fast).
+  // Localhost/LAN pe API pahunch nahi sakti → file ke bytes multipart me bhejo.
   if (/^https:\/\//i.test(link) && !/^https:\/\/(localhost|127\.|10\.|192\.168\.)/i.test(link)) {
     return { type: c.media_type, url: link, filename: c.media_name };
   }
   const f = await (await mediaStore()).get(c.media_file_id);
   if (!f) throw new Error('Attachment file nahi mili — campaign dobara banao');
-  return { type: c.media_type, base64: Buffer.from(f.data).toString('base64'), filename: c.media_name };
+  return { type: c.media_type, data: Buffer.from(f.data), mime: f.mime, filename: c.media_name };
+}
+
+// ZWhatsapp error body: { success:false, error:{ code, message } }
+function waErrCode(r) {
+  try { const j = JSON.parse(r.body || '{}'); return (j.error && j.error.code) || j.code || ''; }
+  catch (e) { return ''; }
 }
 
 function waFailReason(r) {
   if (r.skipped === 'disabled') return 'WhatsApp OFF hai — settings me ON karo';
-  if (r.skipped === 'not-configured') return 'WhatsApp API (URL / key) set nahi hai';
+  if (r.skipped === 'not-configured') return 'WhatsApp API key set nahi hai (.env me ZWA_API_KEY)';
+  if (r.skipped === 'no-session') return 'ZWhatsapp me koi connected number nahi — dashboard me QR se number link karo';
   if (r.skipped === 'no-phone') return 'Number galat hai';
+  if (r.skipped === 'busy') return `API line busy (1 message / ${WA.gapSec || 60}s) — ${r.wait}s baad dobara try karo`;
   if (r.error) return /timeout|abort/i.test(r.error)
     ? 'Timeout — API ne time pe jawab nahi diya (message shayad chala gaya ho)' : r.error;
   let msg = '';
-  try { const j = JSON.parse(r.body || '{}'); msg = j.message || j.error || j.code || ''; }
-  catch (e) { msg = String(r.body || '').slice(0, 120); }
+  try {
+    const j = JSON.parse(r.body || '{}'), e = j.error;
+    msg = (e && typeof e === 'object') ? [e.code, e.message].filter(Boolean).join(': ') : (j.message || e || j.code || '');
+  } catch (e) { msg = String(r.body || '').slice(0, 120); }
   return `HTTP ${r.status}${msg ? ' — ' + (typeof msg === 'string' ? msg : JSON.stringify(msg)) : ''}`;
 }
-// Account-level problem (API off, key galat, plan/daily limit) — har number pe
+// Account-level problem (API off, key galat, number unlink, limit) — har number pe
 // fail karne ke bajaye campaign pause karo; number pending hi rahega.
+// Sirf us ek number ki dikkat (WhatsApp pe nahi, opt-out, 24h window) → wahi failed.
+const WA_RECIPIENT_ERRORS = /^(RECIPIENT_|CONSENT_REQUIRED$|OUTSIDE_SERVICE_WINDOW$)/;
 function waIsAccountError(r) {
-  return r.skipped === 'disabled' || r.skipped === 'not-configured' || [401, 402, 403, 429].includes(r.status);
+  if (['disabled', 'not-configured', 'no-session'].includes(r.skipped)) return true;
+  const code = waErrCode(r);
+  if (code) return !WA_RECIPIENT_ERRORS.test(code);
+  return [401, 402, 403, 404, 410, 429, 503].includes(r.status);
 }
 
 async function findCampaign(d, id) {
@@ -3841,6 +4031,7 @@ app.all('/api/campaigns/cron', async (req, res) => {
     if (!given || given.length !== real.length || !require('crypto').timingSafeEqual(Buffer.from(given), Buffer.from(real))) {
       return res.status(401).json({ error: 'Invalid key' });
     }
+    await waPump();   // serverless: task messages ka outbox bhi isi cron se aage badhta hai
     if (d._invalidate) d._invalidate('Campaigns');
     const now = Date.now(), started = Date.now(), out = [];
     const due = (await d.findAll('Campaigns'))
@@ -4526,6 +4717,9 @@ async function seedAdminIfNeeded() {
 
     // WhatsApp reminders run independently of SMTP.
     setTimeout(() => whatsAppReminderScheduler(), 6000);
+    setTimeout(() => waStartupCheck(), 4000);
+    // Outbox pump — gate (60s) khulte hi agla pending message
+    setInterval(() => { waPump().catch(() => {}); }, 3000);
 
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`\n  Task Manager listening on port ${PORT}`);

@@ -1,20 +1,104 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="rainbow">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Task Manager — Sign In</title>
 <meta name="description" content="Sign in to Task Manager — task delegation and checklist platform."/>
-<meta name="theme-color" content="#07041a"/>
+<meta name="theme-color" content="#030309"/>
+<script>
+  // ?theme=sunset jaisa preview — paint se pehle lagta hai, isliye flash nahi hota
+  (function () {
+    var t = new URLSearchParams(location.search).get('theme');
+    if (/^(rainbow|midnight|gold|ocean|sunset|emerald|violet)$/.test(t || '')) document.documentElement.setAttribute('data-theme', t);
+  })();
+</script>
 <link rel="icon" type="image/svg+xml" href="/task-logo.svg"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet"/>
 <style>
+  /* ══════════════════════════════════════
+     THEME — saare rang yahin se. <html data-theme="..."> badlo:
+     rainbow (default) · midnight · gold · ocean · sunset · emerald · violet (purana)
+     Preview: /?theme=gold
+     Tokens "r g b" triplets hain → rgb(var(--c1) / .3) jaisa use hota hai.
+     c1 = main accent, c2 = second accent, c3 = third accent, btn = Sign In gradient
+  ══════════════════════════════════════ */
+  /* Rainbow — gehra kaala + poora spectrum jo behta rehta hai (overrides neeche "RAINBOW" block me) */
+  :root, :root[data-theme="rainbow"] {
+    --base: 3 3 9; --glass1: 24 20 40; --glass2: 10 9 20; --fill: 17 14 30;
+    --c1: 167 139 250; --c1d: 219 39 119; --c1s: 216 206 255; --c1p: 246 240 255;
+    --c2: 103 232 249; --c2d: 8 145 178;
+    --c3: 252 211 77; --c3s: 253 230 138; --c3d: 79 70 229; --c3p: 255 251 235;
+    --btn1: 219 39 119; --btn2: 147 51 234; --btn3: 8 145 178; --btn-tx: 255 255 255;
+    --tx: 248 247 255; --tx2: 165 162 192; --tx3: 128 125 155; --icon: 150 140 190; --ph: 98 94 125; --chip-tx: 238 236 250;
+    --logo-hue: 0deg;
+    --rb: #ff3d81, #ff8a3d, #ffd23d, #4ade80, #22d3ee, #6c7bff, #c04dff, #ff3d81;
+    --rb-soft: #ff7aa8, #ffb067, #ffe27a, #7ef0a8, #67e8f9, #9aa5ff, #d08bff, #ff7aa8;
+    --rb-deep: #db2777, #ea580c, #d97706, #16a34a, #0891b2, #4f46e5, #9333ea, #db2777;
+  }
+  /* Midnight — lagbhag kaala, silver lines, indigo sirf halka sa */
+  :root[data-theme="midnight"] {
+    --base: 3 4 8; --glass1: 20 22 32; --glass2: 9 10 16; --fill: 14 15 23;
+    --c1: 165 180 252; --c1d: 55 48 163; --c1s: 199 210 254; --c1p: 238 242 255;
+    --c2: 226 232 240; --c2d: 30 27 75;
+    --c3: 125 211 252; --c3s: 186 230 253; --c3d: 30 41 99; --c3p: 241 245 249;
+    --btn1: 79 70 229; --btn2: 67 56 202; --btn3: 55 48 163; --btn-tx: 255 255 255;
+    --tx: 241 245 249; --tx2: 148 156 180; --tx3: 112 120 145; --icon: 120 130 165; --ph: 88 95 120; --chip-tx: 226 232 240;
+    --logo-hue: -18deg;
+  }
+  /* Gold — obsidian kaala + sona, luxury look */
+  :root[data-theme="gold"] {
+    --base: 6 5 3; --glass1: 32 27 17; --glass2: 13 11 7; --fill: 22 18 11;
+    --c1: 212 175 55; --c1d: 120 86 16; --c1s: 234 208 128; --c1p: 252 243 214;
+    --c2: 245 240 230; --c2d: 60 42 10;
+    --c3: 251 191 36; --c3s: 253 230 138; --c3d: 92 62 8; --c3p: 254 249 231;
+    --btn1: 245 215 122; --btn2: 212 175 55; --btn3: 176 132 20; --btn-tx: 24 17 4;
+    --tx: 250 246 235; --tx2: 176 164 138; --tx3: 140 130 108; --icon: 170 150 105; --ph: 112 102 82; --chip-tx: 245 238 220;
+    --logo-hue: 143deg;
+  }
+  :root[data-theme="ocean"] {
+    --base: 2 10 22; --glass1: 10 44 70; --glass2: 4 18 34; --fill: 8 30 48;
+    --c1: 34 211 238; --c1d: 8 145 178; --c1s: 165 243 252; --c1p: 207 250 254;
+    --c2: 110 231 183; --c2d: 37 99 235;
+    --c3: 96 165 250; --c3s: 147 197 253; --c3d: 29 78 216; --c3p: 224 242 254;
+    --btn1: 8 145 178; --btn2: 2 132 199; --btn3: 37 99 235;
+    --tx: 236 254 255; --tx2: 148 186 200; --tx3: 120 160 175; --icon: 100 170 192; --ph: 88 124 140; --chip-tx: 224 247 252;
+    --logo-hue: -73deg;
+  }
+  :root[data-theme="sunset"] {
+    --base: 20 6 4; --glass1: 66 24 14; --glass2: 30 10 6; --fill: 44 16 10;
+    --c1: 251 146 60; --c1d: 234 88 12; --c1s: 253 186 116; --c1p: 255 237 213;
+    --c2: 252 211 77; --c2d: 225 29 72;
+    --c3: 251 113 133; --c3s: 253 164 175; --c3d: 190 18 60; --c3p: 255 228 230;
+    --btn1: 234 88 12; --btn2: 220 38 38; --btn3: 190 18 60;
+    --tx: 255 247 237; --tx2: 214 172 150; --tx3: 182 142 122; --icon: 204 144 112; --ph: 150 110 94; --chip-tx: 255 240 228;
+    --logo-hue: 125deg;
+  }
+  :root[data-theme="emerald"] {
+    --base: 2 14 10; --glass1: 10 50 38; --glass2: 4 24 18; --fill: 8 34 26;
+    --c1: 52 211 153; --c1d: 5 150 105; --c1s: 167 243 208; --c1p: 209 250 229;
+    --c2: 253 224 71; --c2d: 13 148 136;
+    --c3: 45 212 191; --c3s: 153 246 228; --c3d: 15 118 110; --c3p: 204 251 241;
+    --btn1: 5 150 105; --btn2: 13 148 136; --btn3: 15 118 110;
+    --tx: 236 253 245; --tx2: 150 196 178; --tx3: 122 166 150; --icon: 100 176 150; --ph: 90 130 115; --chip-tx: 225 250 240;
+    --logo-hue: -102deg;
+  }
+  :root[data-theme="violet"] {
+    --base: 7 4 26; --glass1: 40 24 88; --glass2: 18 11 44; --fill: 27 18 56;
+    --c1: 167 139 250; --c1d: 124 58 237; --c1s: 196 181 253; --c1p: 233 213 255;
+    --c2: 240 171 252; --c2d: 219 39 119;
+    --c3: 96 165 250; --c3s: 147 197 253; --c3d: 37 99 235; --c3p: 224 231 255;
+    --btn1: 124 58 237; --btn2: 168 85 247; --btn3: 219 39 119;
+    --tx: 245 243 255; --tx2: 165 161 194; --tx3: 139 134 168; --icon: 139 127 199; --ph: 111 106 143; --chip-tx: 236 232 255;
+    --logo-hue: 0deg;
+  }
+
   :root {
-    --bg: #07041a;
-    --text-primary: #f5f3ff;
-    --text-secondary: #a5a1c2;
-    --accent: #a78bfa;
-    --label-color: #c4b5fd;
+    --bg: rgb(var(--base));
+    --text-primary: rgb(var(--tx));
+    --text-secondary: rgb(var(--tx2));
+    --accent: rgb(var(--c1));
+    --label-color: rgb(var(--c1s));
     --ease-out: cubic-bezier(.22,1,.36,1);
     --ease-spring: cubic-bezier(.34,1.56,.64,1);
   }
@@ -37,15 +121,15 @@
   .scene {
     position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;
     background:
-      radial-gradient(ellipse at 50% 120%, rgba(124,58,237,.35) 0%, transparent 60%),
-      radial-gradient(ellipse at 50% -20%, rgba(37,99,235,.16) 0%, transparent 55%),
+      radial-gradient(ellipse at 50% 120%, rgb(var(--c1d) / .35) 0%, transparent 60%),
+      radial-gradient(ellipse at 50% -20%, rgb(var(--c3d) / .16) 0%, transparent 55%),
       var(--bg);
   }
   .blob {position:absolute;border-radius:50%;filter:blur(90px);}
-  .blob.b1 {width:520px;height:520px;background:rgba(124,58,237,.45);top:-180px;left:-160px;}
-  .blob.b2 {width:460px;height:460px;background:rgba(219,39,119,.26);bottom:-160px;right:-140px;}
-  .blob.b3 {width:340px;height:340px;background:rgba(37,99,235,.28);top:30%;left:58%;}
-  .star {position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;opacity:.45;}
+  .blob.b1 {width:520px;height:520px;background:rgb(var(--c1d) / .45);top:-180px;left:-160px;}
+  .blob.b2 {width:460px;height:460px;background:rgb(var(--c2d) / .26);bottom:-160px;right:-140px;}
+  .blob.b3 {width:340px;height:340px;background:rgb(var(--c3d) / .28);top:30%;left:58%;}
+  .cosmos {position:absolute;inset:0;width:100%;height:100%;}
   .floor {
     position:absolute;left:-50%;right:-50%;bottom:0;height:42vh;
     perspective:320px;overflow:hidden;
@@ -56,10 +140,64 @@
     position:absolute;left:0;right:0;top:-100%;bottom:0;
     transform-origin:center bottom;transform:rotateX(62deg);
     background-image:
-      linear-gradient(rgba(167,139,250,.32) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(167,139,250,.32) 1px, transparent 1px);
+      linear-gradient(rgb(var(--c1) / .32) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(var(--c1) / .32) 1px, transparent 1px);
     background-size:48px 48px;
   }
+
+  /* ── CHAKRA — card ke peeche ghoomta neon wheel (3 layer, alag speed/disha) ── */
+  .chakra {
+    position:absolute;inset:0;margin:auto;
+    width:min(92vw,92vh,820px);height:min(92vw,92vh,820px);
+    transition:translate .9s var(--ease-out);
+  }
+  .ck {position:absolute;inset:0;width:100%;height:100%;overflow:visible;}
+  .ck .p-c1{stroke:rgb(var(--c1));} .ck .p-c1s{stroke:rgb(var(--c1s));} .ck .p-c1p{stroke:rgb(var(--c1p));}
+  .ck .p-c2{stroke:rgb(var(--c2));} .ck .p-c3p{stroke:rgb(var(--c3p));}
+  .ck .p-g1{stroke:url(#ckG1);} .ck .p-g2{stroke:url(#ckG2);}
+  .ck .f-c1d{fill:rgb(var(--c1d));} .ck .f-c1p{fill:rgb(var(--c1p));}
+  .ck .s-c1{stop-color:rgb(var(--c1));} .ck .s-c2{stop-color:rgb(var(--c2));} .ck .s-c3{stop-color:rgb(var(--c3));}
+  .chakra-glow {
+    position:absolute;inset:24%;border-radius:50%;filter:blur(12px);
+    background:radial-gradient(circle, rgb(var(--c1) / .38) 0%, rgb(var(--c1d) / .14) 45%, transparent 70%);
+  }
+  .chakra-sweep {
+    position:absolute;inset:4%;border-radius:50%;
+    background:conic-gradient(from 0deg, transparent 0deg 285deg, rgb(var(--c1) / .06) 300deg, rgb(var(--c2) / .3) 357deg, transparent 360deg);
+    -webkit-mask:radial-gradient(closest-side, transparent 20%, #000 22%, #000 97%, transparent 100%);
+            mask:radial-gradient(closest-side, transparent 20%, #000 22%, #000 97%, transparent 100%);
+  }
+
+  .chakra-pulse {
+    position:absolute;inset:8%;border-radius:50%;opacity:0;
+    border:1.5px solid rgb(var(--c1s) / .55);
+    box-shadow:0 0 24px rgb(var(--c1) / .35), inset 0 0 24px rgb(var(--c1) / .2);
+  }
+
+  /* ── AI ORBIT — tilted ellipse pe ghoomte AI products (position JS se) ── */
+  .orbits {position:absolute;inset:0;z-index:2;transition:translate .9s var(--ease-out);}
+  .orbit-track {
+    position:absolute;left:50%;top:50%;border-radius:50%;
+    border:1px dashed rgb(var(--c1) / .17);
+    box-shadow:0 0 30px rgb(var(--c1d) / .08), inset 0 0 30px rgb(var(--c1d) / .06);
+  }
+  .ai-chip {
+    position:absolute;left:0;top:0;
+    display:flex;align-items:center;gap:7px;
+    padding:5px 12px 5px 5px;border-radius:999px;white-space:nowrap;
+    background:linear-gradient(135deg, rgb(var(--glass1) / .85), rgb(var(--glass2) / .85));
+    border:1px solid rgb(var(--c1) / .3);
+    box-shadow:0 6px 18px rgba(0,0,0,.35), 0 0 16px rgb(var(--c1d) / .25), inset 0 1px 0 rgba(255,255,255,.08);
+    font:600 12px/1 'Inter',sans-serif;color:rgb(var(--chip-tx));letter-spacing:.2px;
+    will-change:transform,opacity;
+  }
+  .ai-chip i {
+    font-style:normal;width:24px;height:24px;border-radius:50%;
+    display:grid;place-items:center;font-size:13px;
+    background:radial-gradient(circle at 32% 28%, rgba(255,255,255,.35), transparent 55%), var(--c);
+    box-shadow:0 0 12px var(--c);
+  }
+  .orbits.narrow .inner {display:none;}
 
   .wrap {
     position:relative;z-index:10;
@@ -72,19 +210,19 @@
     position:relative;overflow:hidden;
     border-radius:24px;
     padding:36px 28px 30px;
-    background:linear-gradient(160deg, rgba(40,24,88,.72) 0%, rgba(18,11,44,.82) 100%);
+    background:linear-gradient(160deg, rgb(var(--glass1) / .72) 0%, rgb(var(--glass2) / .82) 100%);
     -webkit-backdrop-filter:blur(18px) saturate(140%);
             backdrop-filter:blur(18px) saturate(140%);
-    border:1px solid rgba(167,139,250,.16);
+    border:1px solid rgb(var(--c1) / .16);
     box-shadow:
       0 30px 80px rgba(0,0,0,.55),
-      0 0 70px rgba(124,58,237,.22),
+      0 0 70px rgb(var(--c1d) / .22),
       inset 0 1px 0 rgba(255,255,255,.07);
     transition:box-shadow .3s;
   }
   .card::before {
     content:'';position:absolute;inset:0;border-radius:inherit;padding:1.5px;pointer-events:none;
-    background:conic-gradient(from var(--ang), transparent 0deg 220deg, #a78bfa 270deg, #f0abfc 310deg, #60a5fa 340deg, transparent 360deg);
+    background:conic-gradient(from var(--ang), transparent 0deg 220deg, rgb(var(--c1)) 270deg, rgb(var(--c2)) 310deg, rgb(var(--c3)) 340deg, transparent 360deg);
     -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite:xor;
             mask-composite:exclude;
@@ -103,20 +241,20 @@
     background:#ffffff;
     display:grid;place-items:center;position:relative;overflow:hidden;
     box-shadow:
-      0 0 0 1px rgba(167,139,250,.55),
-      0 0 26px rgba(167,139,250,.45),
+      0 0 0 1px rgb(var(--c1) / .55),
+      0 0 26px rgb(var(--c1) / .45),
       0 6px 16px rgba(0,0,0,.35);
   }
-  .brand-logo-banner img {width:100%;height:100%;object-fit:contain;}
+  .brand-logo-banner img {width:100%;height:100%;object-fit:contain;filter:hue-rotate(var(--logo-hue));}
   .logo-sub {
     font-size:10px;font-weight:700;letter-spacing:3px;
     color:var(--accent);text-transform:uppercase;
     margin-bottom:7px;
   }
   .logo-dots {display:flex;justify-content:center;gap:5px;margin-bottom:6px;}
-  .logo-dots span {width:5px;height:5px;border-radius:50%;background:#a78bfa;box-shadow:0 0 8px #a78bfa;}
-  .logo-dots span:nth-child(2) {background:#e879f9;box-shadow:0 0 8px #e879f9;}
-  .logo-dots span:nth-child(3) {background:#60a5fa;box-shadow:0 0 8px #60a5fa;}
+  .logo-dots span {width:5px;height:5px;border-radius:50%;background:rgb(var(--c1));box-shadow:0 0 8px rgb(var(--c1));}
+  .logo-dots span:nth-child(2) {background:rgb(var(--c2));box-shadow:0 0 8px rgb(var(--c2));}
+  .logo-dots span:nth-child(3) {background:rgb(var(--c3));box-shadow:0 0 8px rgb(var(--c3));}
 
   /* ── CARD HEADING ── */
   .card-title {
@@ -125,7 +263,7 @@
     margin-bottom:4px;text-align:center;letter-spacing:-.2px;
   }
   .card-title .grad {
-    background:linear-gradient(90deg,#fff 0%,#e9d5ff 35%,#f0abfc 50%,#e9d5ff 65%,#fff 100%);
+    background:linear-gradient(90deg,#fff 0%,rgb(var(--c1p)) 35%,rgb(var(--c2)) 50%,rgb(var(--c1p)) 65%,#fff 100%);
     background-size:200% auto;
     -webkit-background-clip:text;background-clip:text;
     -webkit-text-fill-color:transparent;color:transparent;
@@ -147,7 +285,7 @@
 
   .input-icon {
     position:absolute;left:15px;top:50%;transform:translateY(-50%);
-    font-size:15px;color:#8b7fc7;pointer-events:none;
+    font-size:15px;color:rgb(var(--icon));pointer-events:none;
     transition:color .2s;
   }
 
@@ -155,18 +293,18 @@
     width:100%;
     padding:13px 14px 13px 42px;
     background:rgba(255,255,255,.04);
-    border:1.5px solid rgba(167,139,250,.2);
+    border:1.5px solid rgb(var(--c1) / .2);
     border-radius:12px;
     font-size:14px;font-family:'Inter',sans-serif;
     color:var(--text-primary);outline:none;
     transition:border-color .25s, background .25s, box-shadow .25s;
   }
-  input::placeholder {color:#6f6a8f;}
-  input:hover {border-color:rgba(167,139,250,.35);}
+  input::placeholder {color:rgb(var(--ph));}
+  input:hover {border-color:rgb(var(--c1) / .35);}
   input:focus {
     border-color:var(--accent);
     background:rgba(255,255,255,.07);
-    box-shadow:0 0 0 3px rgba(167,139,250,.16), 0 0 24px rgba(167,139,250,.22);
+    box-shadow:0 0 0 3px rgb(var(--c1) / .16), 0 0 24px rgb(var(--c1) / .22);
   }
   .input-wrap:focus-within .input-icon {color:var(--accent);}
   /* Browser autofill ka peela/safed background dark theme me na aaye */
@@ -174,7 +312,7 @@
   input:-webkit-autofill:hover,
   input:-webkit-autofill:focus {
     -webkit-text-fill-color:var(--text-primary);
-    -webkit-box-shadow:0 0 0 1000px #1b1238 inset;
+    -webkit-box-shadow:0 0 0 1000px rgb(var(--fill)) inset;
     caret-color:var(--text-primary);
     transition:background-color 9999s;
   }
@@ -196,19 +334,20 @@
   /* ── BUTTON ── */
   .btn-login {
     width:100%;padding:14px;margin-top:6px;
-    background:linear-gradient(110deg,#7c3aed 0%,#a855f7 50%,#db2777 100%);
+    background:linear-gradient(110deg,rgb(var(--btn1)) 0%,rgb(var(--btn2)) 50%,rgb(var(--btn3)) 100%);
     background-size:200% 100%;background-position:0% 0;
-    color:#ffffff;border:none;border-radius:12px;
+    color:rgb(var(--btn-tx, 255 255 255));border:none;border-radius:12px;
     font-size:14px;font-weight:700;font-family:'Inter',sans-serif;
     cursor:pointer;position:relative;overflow:hidden;
-    box-shadow:0 10px 30px -8px rgba(168,85,247,.75), inset 0 1px 0 rgba(255,255,255,.22);
+    box-shadow:0 10px 30px -8px rgb(var(--btn2) / .75), inset 0 1px 0 rgba(255,255,255,.22);
     letter-spacing:.3px;
+    text-shadow:0 1px 2px rgba(0,0,0,.28);
     transition:background-position .5s var(--ease-out), transform .2s, box-shadow .25s;
   }
   .btn-login:hover {
     background-position:100% 0;
     transform:translateY(-2px);
-    box-shadow:0 14px 36px -8px rgba(219,39,119,.65), inset 0 1px 0 rgba(255,255,255,.22);
+    box-shadow:0 14px 36px -8px rgb(var(--btn3) / .65), inset 0 1px 0 rgba(255,255,255,.22);
   }
   .btn-login:active{transform:translateY(0) scale(.98);}
   .btn-login:disabled{opacity:.6;cursor:not-allowed;transform:none;}
@@ -240,7 +379,7 @@
 
   /* ── FOOTER ── */
   .footer {
-    text-align:center;font-size:11px;color:#8b86a8;
+    text-align:center;font-size:11px;color:rgb(var(--tx3));
     margin-top:22px;letter-spacing:.3px;
   }
   .footer strong{color:var(--label-color);}
@@ -251,21 +390,21 @@
   ══════════════════════════════════════ */
   .boom {position:fixed;inset:0;place-items:center;pointer-events:none;z-index:15;display:none;}
   .core,.ring {grid-area:1/1;border-radius:50%;opacity:0;}
-  .core {width:90px;height:90px;background:radial-gradient(circle,#fff 0%,#e9d5ff 30%,#a78bfa 55%,rgba(124,58,237,0) 72%);}
-  .ring {width:140px;height:140px;border:2px solid #c4b5fd;box-shadow:0 0 18px #a78bfa, inset 0 0 18px #a78bfa;}
-  .ring.r2 {border-color:#f0abfc;box-shadow:0 0 18px #e879f9, inset 0 0 18px #e879f9;}
-  .ring.r3 {border-color:#93c5fd;box-shadow:0 0 18px #60a5fa, inset 0 0 18px #60a5fa;}
+  .core {width:90px;height:90px;background:radial-gradient(circle,#fff 0%,rgb(var(--c1p)) 30%,rgb(var(--c1)) 55%,rgb(var(--c1d) / 0) 72%);}
+  .ring {width:140px;height:140px;border:2px solid rgb(var(--c1s));box-shadow:0 0 18px rgb(var(--c1)), inset 0 0 18px rgb(var(--c1));}
+  .ring.r2 {border-color:rgb(var(--c2));box-shadow:0 0 18px rgb(var(--c2)), inset 0 0 18px rgb(var(--c2));}
+  .ring.r3 {border-color:rgb(var(--c3s));box-shadow:0 0 18px rgb(var(--c3)), inset 0 0 18px rgb(var(--c3));}
   .flash {
     position:fixed;inset:0;pointer-events:none;z-index:30;opacity:0;display:none;
-    background:radial-gradient(circle at 50% 50%, rgba(255,255,255,.95), rgba(196,181,253,.6) 35%, rgba(124,58,237,0) 70%);
+    background:radial-gradient(circle at 50% 50%, rgba(255,255,255,.95), rgb(var(--c1s) / .6) 35%, rgb(var(--c1d) / 0) 70%);
   }
   /* Success pe poori screen roshni — app ke light background me ghul jaati hai */
-  .flash.go {background:radial-gradient(circle at var(--fx,50%) var(--fy,50%), #ffffff 0%, #ede9fe 35%, #f1f5f9 75%);}
+  .flash.go {background:radial-gradient(circle at var(--fx,50%) var(--fy,50%), #ffffff 0%, rgb(var(--c1p)) 35%, #f1f5f9 75%);}
   .slit {
     position:absolute;left:16px;right:16px;top:50%;height:3px;margin-top:-1.5px;
     border-radius:3px;z-index:2;pointer-events:none;display:none;
-    background:linear-gradient(90deg,transparent,#c4b5fd 15%,#fff 50%,#f0abfc 85%,transparent);
-    box-shadow:0 0 18px 4px rgba(196,181,253,.8), 0 0 50px 10px rgba(167,139,250,.5);
+    background:linear-gradient(90deg,transparent,rgb(var(--c1s)) 15%,#fff 50%,rgb(var(--c2)) 85%,transparent);
+    box-shadow:0 0 18px 4px rgb(var(--c1s) / .8), 0 0 50px 10px rgb(var(--c1) / .5);
   }
   .spark {
     position:fixed;left:0;top:0;width:var(--s);height:var(--s);border-radius:50%;
@@ -284,7 +423,6 @@
   @keyframes drift1{to{transform:translate(120px,90px) scale(1.15);}}
   @keyframes drift2{to{transform:translate(-110px,-70px) scale(1.1);}}
   @keyframes drift3{to{transform:translate(-160px,60px) scale(.85);}}
-  @keyframes twinkle{0%,100%{opacity:.12;transform:scale(.6);}50%{opacity:.95;transform:scale(1.1);}}
   @keyframes floorMove{from{transform:rotateX(62deg) translateY(0);}to{transform:rotateX(62deg) translateY(48px);}}
   @keyframes spinAng{to{--ang:360deg;}}
   @keyframes rise{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:none;}}
@@ -298,6 +436,11 @@
   @keyframes warp{to{opacity:0;transform:scale(1.18);filter:blur(10px) brightness(1.6);}}
   @keyframes flashGo{from{opacity:0;}to{opacity:1;}}
   @keyframes pop{from{opacity:0;transform:scale(.5);}to{opacity:1;transform:none;}}
+  @keyframes ckSpin{to{transform:rotate(360deg);}}
+  @keyframes ckPulse{0%,100%{opacity:.7;transform:scale(.94);}50%{opacity:1;transform:scale(1.06);}}
+  @keyframes chakraIn{from{opacity:0;transform:scale(.5) rotate(-45deg);}}
+  @keyframes orbitsIn{from{opacity:0;transform:scale(.82);}}
+  @keyframes sonar{0%{opacity:0;transform:scale(.25);}15%{opacity:.9;}100%{opacity:0;transform:scale(1.15);}}
 
   @media (prefers-reduced-motion:no-preference) {
     /* Intro timeline: 0–.45s core charge → .45s BOOM (flash + rings + sparks + shake)
@@ -317,8 +460,19 @@
     .blob.b1{animation:drift1 18s ease-in-out infinite alternate;}
     .blob.b2{animation:drift2 22s ease-in-out infinite alternate;}
     .blob.b3{animation:drift3 26s ease-in-out infinite alternate;}
-    .star{animation:twinkle var(--tw,3s) ease-in-out var(--td,0s) infinite;}
+    .cosmos{animation:cosmosIn 2.2s ease-out .5s backwards;}
     .floor-grid{animation:floorMove 2.6s linear infinite;}
+
+    /* Chakra BOOM ke baad khulta hai, phir har layer apni speed se ghoomti hai */
+    .chakra{animation:chakraIn 1.5s var(--ease-out) .7s backwards;}
+    .ck-a{animation:ckSpin 90s linear infinite;}
+    .ck-b{animation:ckSpin 55s linear infinite reverse;}
+    .ck-c{animation:ckSpin 24s linear infinite;}
+    .chakra-sweep{animation:ckSpin 6s linear infinite;}
+    .chakra-glow{animation:ckPulse 4s ease-in-out infinite;}
+    .chakra-pulse{animation:sonar 5s cubic-bezier(.2,.6,.3,1) 2s infinite;}
+    .chakra-pulse.p2{animation-delay:4.5s;}
+    .orbits{animation:orbitsIn 1.4s var(--ease-out) .95s backwards;}
 
     .rise{animation:rise .6s var(--ease-out) calc(.95s + var(--d,0) * .07s) backwards;}
     .brand-logo-banner{animation:logoIn .8s var(--ease-spring) .9s backwards, float 4.5s ease-in-out 1.8s infinite;}
@@ -336,7 +490,7 @@
     /* Mouse ke saath chalne wali spotlight */
     .card::after {
       content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;
-      background:radial-gradient(360px circle at var(--mx,50%) var(--my,0%), rgba(167,139,250,.14), transparent 45%);
+      background:radial-gradient(360px circle at var(--mx,50%) var(--my,0%), rgb(var(--c1) / .14), transparent 45%);
       opacity:0;transition:opacity .4s;
     }
     .card:hover::after{opacity:1;}
@@ -348,10 +502,75 @@
     .input-icon{transition:color .2s,transform .35s var(--ease-spring);}
     .input-wrap:focus-within .input-icon{transform:translateY(-50%) scale(1.18);}
     label{transition:color .2s,letter-spacing .3s var(--ease-out);}
-    .form-group:focus-within label{color:#e9d5ff;letter-spacing:1.4px;}
+    .form-group:focus-within label{color:rgb(var(--c1p));letter-spacing:1.4px;}
 
     .btn-login:hover::after{left:130%;transition:left .75s var(--ease-out);}
     .btn-login.success .btn-done{animation:pop .45s var(--ease-spring);}
+  }
+
+  @keyframes cosmosIn{from{opacity:0;}}
+  @keyframes hueFlow{to{filter:hue-rotate(360deg);}}
+  @keyframes rbFlow{to{background-position:-150% 0;}}
+
+  /* ══════════════════════════════════════
+     🌈 RAINBOW — sirf data-theme="rainbow" par. Rang ek-doosre me ghulte, behte rehte hain.
+  ══════════════════════════════════════ */
+  :root[data-theme="rainbow"] .card::before {background:conic-gradient(from var(--ang), var(--rb));}
+  :root[data-theme="rainbow"] .card {
+    box-shadow:
+      0 30px 80px rgba(0,0,0,.6),
+      -40px -24px 90px rgba(255,61,129,.15),
+      40px 24px 90px rgba(34,211,238,.15),
+      inset 0 1px 0 rgba(255,255,255,.07);
+  }
+  :root[data-theme="rainbow"] .wrap.shake .card {
+    box-shadow:0 30px 80px rgba(0,0,0,.6), 0 0 70px rgba(239,68,68,.45), inset 0 1px 0 rgba(255,255,255,.07);
+  }
+  :root[data-theme="rainbow"] .card-title .grad {background-image:linear-gradient(90deg, var(--rb-soft));}
+  :root[data-theme="rainbow"] .logo-dots span {background:#ff3d81;box-shadow:0 0 8px #ff3d81;}
+  :root[data-theme="rainbow"] .logo-dots span:nth-child(2) {background:#ffd23d;box-shadow:0 0 8px #ffd23d;}
+  :root[data-theme="rainbow"] .logo-dots span:nth-child(3) {background:#22d3ee;box-shadow:0 0 8px #22d3ee;}
+
+  /* Button: spectrum ka gehra version (safed text padha jaye) jo left ki taraf behta hai */
+  :root[data-theme="rainbow"] .btn-login {
+    background-image:linear-gradient(90deg, var(--rb-deep));
+    background-size:300% 100%;
+    box-shadow:0 10px 30px -8px rgba(236,72,153,.55), 0 14px 40px -14px rgba(34,211,238,.55), inset 0 1px 0 rgba(255,255,255,.25);
+    text-shadow:0 1px 3px rgba(0,0,0,.45);
+  }
+  :root[data-theme="rainbow"] .btn-login.success,
+  :root[data-theme="rainbow"] .btn-login.success:disabled {
+    background-image:linear-gradient(135deg,#22c55e 0%,#16a34a 100%);background-size:100% 100%;
+  }
+
+  /* Chakra: har line par spectrum + poora wheel rang badalta rehta hai */
+  :root[data-theme="rainbow"] .ck [class*="p-"] {stroke:url(#ckRb);}
+  :root[data-theme="rainbow"] .chakra-sweep {
+    background:conic-gradient(from 0deg, transparent 0deg 235deg, rgba(255,61,129,.16) 275deg,
+      rgba(255,210,61,.2) 305deg, rgba(74,222,128,.24) 332deg, rgba(34,211,238,.32) 357deg, transparent 360deg);
+  }
+
+  /* AI chips: ghoomta rainbow border (padding-box par kaanch, border-box par spectrum) */
+  :root[data-theme="rainbow"] .ai-chip {
+    border-color:transparent;
+    background:
+      linear-gradient(135deg, rgb(var(--glass1) / .94), rgb(var(--glass2) / .94)) padding-box,
+      conic-gradient(from var(--ang), var(--rb)) border-box;
+  }
+
+  /* Floor: grid ki lines mask hain, neeche spectrum — Tron jaisa rainbow farsh */
+  :root[data-theme="rainbow"] .floor-grid {
+    background:linear-gradient(90deg, var(--rb));
+    -webkit-mask:linear-gradient(#000 1px, transparent 1px) 0 0/48px 48px, linear-gradient(90deg, #000 1px, transparent 1px) 0 0/48px 48px;
+            mask:linear-gradient(#000 1px, transparent 1px) 0 0/48px 48px, linear-gradient(90deg, #000 1px, transparent 1px) 0 0/48px 48px;
+    opacity:.5;
+  }
+
+  @media (prefers-reduced-motion:no-preference) {
+    :root[data-theme="rainbow"] .chakra {animation:chakraIn 1.5s var(--ease-out) .7s backwards, hueFlow 16s linear infinite;}
+    :root[data-theme="rainbow"] .btn-login {animation:rise .6s var(--ease-out) calc(.95s + var(--d,0) * .07s) backwards, rbFlow 6s linear infinite;}
+    :root[data-theme="rainbow"] .btn-login.success {animation:none;}
+    :root[data-theme="rainbow"] .ai-chip {animation:spinAng 4s linear infinite;}
   }
 </style>
 </head>
@@ -361,7 +580,56 @@
   <div class="blob b1"></div>
   <div class="blob b2"></div>
   <div class="blob b3"></div>
+
+  <!-- Brahmand: ghoomti galaxy + taare + tootte taare — JS draw karta hai -->
+  <canvas class="cosmos"></canvas>
+
+  <!-- Chakra: a = ticks (dheema), b = dashed arcs (ulta), c = 24 spokes (tez) -->
+  <div class="chakra">
+    <div class="chakra-glow"></div>
+    <div class="chakra-pulse"></div>
+    <div class="chakra-pulse p2"></div>
+    <div class="chakra-sweep"></div>
+    <!-- Rang CSS classes se (p-* = stroke, f-* = fill, s-* = gradient stop) — rainbow theme sabko #ckRb de deta hai -->
+    <svg class="ck ck-a" viewBox="0 0 400 400" fill="none">
+      <defs>
+        <linearGradient id="ckG1" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" class="s-c1"/><stop offset=".5" class="s-c2"/><stop offset="1" class="s-c3"/>
+        </linearGradient>
+        <linearGradient id="ckRb" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#ff3d81"/><stop offset=".17" stop-color="#ff8a3d"/><stop offset=".33" stop-color="#ffd23d"/>
+          <stop offset=".5" stop-color="#4ade80"/><stop offset=".67" stop-color="#22d3ee"/><stop offset=".83" stop-color="#6c7bff"/>
+          <stop offset="1" stop-color="#c04dff"/>
+        </linearGradient>
+      </defs>
+      <circle cx="200" cy="200" r="197" class="p-c1" stroke-opacity=".35" stroke-width=".6"/>
+      <circle cx="200" cy="200" r="190" class="p-c1s" stroke-opacity=".5" stroke-width="6" stroke-dasharray="0.9 9.0484"/>
+      <circle cx="200" cy="200" r="187" class="p-g1" stroke-width="13" stroke-dasharray="2.6 95.313"/>
+      <circle cx="200" cy="200" r="181" class="p-c1" stroke-opacity=".22" stroke-width=".6"/>
+    </svg>
+    <svg class="ck ck-b" viewBox="0 0 400 400" fill="none">
+      <defs>
+        <linearGradient id="ckG2" x1="1" y1="0" x2="0" y2="1">
+          <stop offset="0" class="s-c2"/><stop offset=".55" class="s-c1"/><stop offset="1" class="s-c3"/>
+        </linearGradient>
+      </defs>
+      <circle cx="200" cy="200" r="174" class="p-c3p" stroke-opacity=".55" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="0.001 18.221"/>
+      <circle cx="200" cy="200" r="166" class="p-c2" stroke-opacity=".4" stroke-width="1.4" stroke-linecap="round" stroke-dasharray="24 10.767"/>
+      <circle cx="200" cy="200" r="155" class="p-g2" stroke-width="3.2" stroke-linecap="round" stroke-dasharray="200 124.63" opacity=".85"/>
+    </svg>
+    <svg class="ck ck-c" viewBox="0 0 400 400" fill="none">
+      <circle cx="200" cy="200" r="140" class="p-c1" stroke-opacity=".5" stroke-width="1.2"/>
+      <circle cx="200" cy="200" r="82" class="p-c1s" stroke-opacity=".26" stroke-width="116" stroke-dasharray="1.5 19.9675"/>
+      <circle cx="200" cy="200" r="140" class="p-c1p" stroke-width="5" stroke-linecap="round" stroke-dasharray="0.001 36.651"/>
+      <circle cx="200" cy="200" r="24" class="f-c1d p-g1" fill-opacity=".28" stroke-width="2"/>
+      <circle cx="200" cy="200" r="9" class="f-c1p" fill-opacity=".7"/>
+    </svg>
+  </div>
+
   <div class="floor"><div class="floor-grid"></div></div>
+
+  <!-- AI products ke chips — JS banata hai aur ghumata hai -->
+  <div class="orbits"></div>
 </div>
 
 <div class="boom" aria-hidden="true">
@@ -441,24 +709,243 @@
 const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const wrapEl  = document.querySelector('.wrap');
 const cardEl  = document.querySelector('.card');
-const sceneEl = document.querySelector('.scene');
 const flashEl = document.querySelector('.flash');
 
-// Taare — reduced motion me bhi dikhte hain, bas twinkle nahi karte
-(function makeStars() {
-  const n = window.innerWidth < 600 ? 35 : 70, frag = document.createDocumentFragment();
-  for (let i = 0; i < n; i++) {
-    const s = document.createElement('span'), size = Math.random() < .15 ? 3 : 2;
-    s.className = 'star';
-    s.style.cssText = `left:${Math.random() * 100}%;top:${Math.random() * 75}%;width:${size}px;height:${size}px;` +
-      `--tw:${(2 + Math.random() * 3).toFixed(2)}s;--td:${(-Math.random() * 5).toFixed(2)}s`;
-    frag.appendChild(s);
+// ── AI ORBIT — do tilted ellipse, ulti dishaon me; upar = door (chhota/dhundhla), neeche = paas ──
+// Login success par orbitTarget badhta hai → chips tez ghoom ke nikalte hain
+let orbitTarget = 1;
+(function aiOrbits() {
+  const ORBITS = [
+    { tilt: -6, period: 75, dir: 1, items: [
+      ['💬', 'ChatGPT', '#10a37f'], ['🧠', 'Claude', '#d97757'], ['✨', 'Gemini', '#6d72f6'],
+      ['🚀', 'Copilot', '#0ea5e9'], ['🔍', 'Perplexity', '#14b8a6'], ['🎨', 'Midjourney', '#64748b'],
+      ['🦙', 'Llama', '#2563eb'], ['🌪️', 'Mistral', '#f97316'], ['🐋', 'DeepSeek', '#4f6bed'], ['⚡', 'Grok', '#52525b']
+    ]},
+    { tilt: 9, period: 55, dir: -1, inner: true, items: [
+      ['🎬', 'Sora', '#7c3aed'], ['🖼️', 'DALL·E', '#db2777'], ['🎞️', 'Runway', '#0891b2'], ['🎙️', 'ElevenLabs', '#a16207'],
+      ['🎵', 'Suno', '#e11d48'], ['⌨️', 'Cursor', '#4338ca'], ['📝', 'Notion AI', '#57534e'], ['🌀', 'Stable Diffusion', '#9333ea']
+    ]}
+  ];
+  const root = document.querySelector('.orbits');
+  const chakraEl = document.querySelector('.chakra');
+  const rings = ORBITS.map(o => {
+    const track = document.createElement('div');
+    track.className = 'orbit-track' + (o.inner ? ' inner' : '');
+    root.appendChild(track);
+    const chips = o.items.map(([icon, name, c]) => {
+      const el = document.createElement('span'), dot = document.createElement('i');
+      el.className = 'ai-chip' + (o.inner ? ' inner' : '');
+      dot.style.setProperty('--c', c);
+      dot.textContent = icon;
+      el.append(dot, name);
+      root.appendChild(el);
+      return el;
+    });
+    const t = o.tilt * Math.PI / 180;
+    return { ...o, track, chips, cos: Math.cos(t), sin: Math.sin(t), rx: 0, ry: 0 };
+  });
+
+  let cx = 0, cy = 0;
+  function layout() {
+    const w = window.innerWidth, h = window.innerHeight, narrow = w < 700;
+    cx = w / 2; cy = h / 2;
+    const radii = narrow
+      ? [[w * .26, h * .46], [w * .2, h * .38]]
+      : [[Math.min(w * .44, 800), Math.min(h * .4, 380)], [Math.min(w * .31, 560), Math.min(h * .29, 270)]];
+    root.classList.toggle('narrow', narrow);
+    rings.forEach((r, i) => {
+      [r.rx, r.ry] = radii[i];
+      r.track.style.cssText = `width:${r.rx * 2}px;height:${r.ry * 2}px;` +
+        `margin:${-r.ry}px 0 0 ${-r.rx}px;transform:rotate(${r.tilt}deg)`;
+    });
   }
-  sceneEl.appendChild(frag);
+  function place(time) {
+    for (const r of rings) {
+      const base = r.dir * time * (Math.PI * 2 / r.period), step = Math.PI * 2 / r.chips.length;
+      r.chips.forEach((el, k) => {
+        const a = base + k * step, ex = r.rx * Math.cos(a), ey = r.ry * Math.sin(a);
+        const x = cx + ex * r.cos - ey * r.sin, y = cy + ex * r.sin + ey * r.cos;
+        const depth = (Math.sin(a) + 1) / 2;
+        el.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) translate(-50%,-50%) scale(${(.8 + depth * .3).toFixed(3)})`;
+        el.style.opacity = (.55 + depth * .45).toFixed(2);
+        el.style.zIndex = Math.round(depth * 10);
+      });
+    }
+  }
+
+  layout();
+  window.addEventListener('resize', () => { layout(); if (REDUCED_MOTION) place(0); });
+  if (REDUCED_MOTION) { place(0); return; }
+
+  // Speed ko dheere-dheere target tak le jao — jhatka nahi lagta
+  let time = 0, speed = 1, last = performance.now();
+  (function tick(now) {
+    const dt = Math.min(now - last, 64) / 1000;
+    last = now;
+    speed += (orbitTarget - speed) * Math.min(dt * 3, 1);
+    time += dt * speed;
+    place(time);
+    requestAnimationFrame(tick);
+  })(last);
+
+  // Mouse ke ulta halka parallax — gehrai ka ehsaas
+  if (window.matchMedia('(hover:hover) and (pointer:fine)').matches) {
+    window.addEventListener('pointermove', e => {
+      const dx = e.clientX / window.innerWidth - .5, dy = e.clientY / window.innerHeight - .5;
+      root.style.translate = `${(dx * -28).toFixed(1)}px ${(dy * -18).toFixed(1)}px`;
+      chakraEl.style.translate = `${(dx * -12).toFixed(1)}px ${(dy * -9).toFixed(1)}px`;
+    });
+  }
+})();
+
+// ── BRAHMAND — ek canvas: tirchhi spiral galaxy (apni dhuri par), 3 parat taare, tootte taare ──
+// Paas wali parat tez ghoomti hai (parallax). Login success par orbitTarget ke saath warp hota hai.
+(function cosmos() {
+  const cv = document.querySelector('.cosmos'), ctx = cv.getContext('2d');
+  const css = getComputedStyle(document.documentElement);
+  const tok = name => css.getPropertyValue(name).trim().split(/\s+/).map(Number);   // "r g b" → [r, g, b]
+  const rgba = ([r, g, b], a) => `rgba(${r},${g},${b},${a})`;
+  const RAINBOW = document.documentElement.dataset.theme === 'rainbow';
+  const PAL = [tok('--c1'), tok('--c2'), tok('--c3')], PALE = tok('--c1p');
+  const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
+  // t = kendra se doori (0..1); rainbow me rang bahu (arm) + doori se spectrum par chalta hai
+  const tint = (t, arm, a) => RAINBOW
+    ? `hsla(${(arm * 90 + t * 260 + gauss() * 18).toFixed(0)},95%,${(62 + Math.random() * 16).toFixed(0)}%,${a})`
+    : rgba(PAL[Math.min(2, Math.floor(t * 2.4 + Math.random() * .8))], a);
+
+  // Galaxy ek hi baar offscreen banti hai; har frame sirf ghuma ke drawImage
+  const G = 1024, gal = document.createElement('canvas');
+  gal.width = gal.height = G;
+  (function buildGalaxy() {
+    const g = gal.getContext('2d'), c = G / 2, R = G * .46, ARMS = 4;
+    const n = window.innerWidth < 700 ? 3200 : 6500;
+    g.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 1100; i++) {                       // disk ki halki dhool
+      const r = Math.sqrt(Math.random()) * R, a = Math.random() * Math.PI * 2;
+      g.fillStyle = `rgba(255,255,255,${(.05 + Math.random() * .2).toFixed(2)})`;
+      g.fillRect(c + Math.cos(a) * r, c + Math.sin(a) * r, 1, 1);
+    }
+    for (let i = 0; i < n; i++) {                          // spiral bahu — logarithmic jaisa twist
+      const arm = i % ARMS, t = Math.pow(Math.random(), 1.35);
+      const theta = arm * Math.PI * 2 / ARMS + t * 4.2 + gauss() * (.5 - t * .28);
+      const r = t * R + gauss() * R * .03;
+      const x = c + Math.cos(theta) * r, y = c + Math.sin(theta) * r;
+      if (i % 8 === 0) {                                   // bahu par nebula — naram kinare wale badal
+        const hr = 14 + Math.random() * 22, hg = g.createRadialGradient(x, y, 0, x, y, hr);
+        hg.addColorStop(0, tint(t, arm, .07));
+        hg.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = hg;
+        g.fillRect(x - hr, y - hr, hr * 2, hr * 2);
+      }
+      g.fillStyle = tint(t, arm, ((1 - t * .65) * (.35 + Math.random() * .6)).toFixed(2));
+      const s = .6 + Math.random() * 1.3;
+      g.fillRect(x - s / 2, y - s / 2, s, s);
+    }
+    const core = g.createRadialGradient(c, c, 0, c, c, R * .3);
+    core.addColorStop(0, 'rgba(255,255,255,.5)');
+    core.addColorStop(.3, rgba(PALE, .2));
+    core.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = core; g.fillRect(0, 0, G, G);
+  })();
+
+  let w = 0, h = 0, dpr = 1, stars = [];
+  const LAYER_SPEED = [.012, .019, .028];                  // rad/s — door → paas
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    w = window.innerWidth; h = window.innerHeight;
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    const maxR = Math.hypot(w, h) / 2 + 20, n = w < 700 ? 170 : 380;
+    stars = Array.from({ length: n }, () => {
+      const layer = Math.random() < .6 ? 0 : Math.random() < .7 ? 1 : 2;
+      return {
+        r: Math.sqrt(Math.random()) * maxR, a: Math.random() * Math.PI * 2, layer,
+        s: [.8, 1.2, 1.8][layer] * (.8 + Math.random() * .4),
+        tw: 1 + Math.random() * 2.5, ph: Math.random() * 6.3,
+        col: RAINBOW && Math.random() < .35 ? `hsl(${Math.floor(Math.random() * 360)},100%,82%)`
+           : Math.random() < .2 ? rgba(PALE, 1) : '#fff'
+      };
+    });
+  }
+
+  let meteors = [], nextMeteor = 2.5;
+  function spawnMeteor() {
+    const dir = Math.random() < .5 ? -1 : 1;
+    meteors.push({
+      x: w * (.15 + Math.random() * .7), y: h * Math.random() * .35,
+      vx: dir * (520 + Math.random() * 380), vy: 240 + Math.random() * 200,
+      life: 0, max: .8 + Math.random() * .5,
+      col: RAINBOW ? `hsl(${Math.floor(Math.random() * 360)},100%,75%)` : rgba(PALE, 1)
+    });
+  }
+
+  function draw(cosmicT, now, dt) {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    const cx = w / 2, cy = h / 2;
+
+    // Galaxy: tirchhi disk (scaleY) jo apni dhuri par ghoomti hai
+    const size = Math.min(Math.max(w, h) * 1.05, 1700);
+    ctx.save();
+    ctx.translate(cx, cy); ctx.rotate(-.32); ctx.scale(1, .42); ctx.rotate(cosmicT * .045);
+    ctx.globalAlpha = .8;
+    ctx.drawImage(gal, -size / 2, -size / 2, size, size);
+    ctx.restore();
+
+    // Taare: screen ke kendra ke gird, har parat apni speed se
+    for (const s of stars) {
+      const ang = s.a + cosmicT * LAYER_SPEED[s.layer];
+      const x = cx + Math.cos(ang) * s.r, y = cy + Math.sin(ang) * s.r;
+      if (x < -4 || y < -4 || x > w + 4 || y > h + 4) continue;
+      const tw = .35 + .65 * (.5 + .5 * Math.sin(now * s.tw + s.ph));
+      ctx.fillStyle = s.col;
+      if (s.layer === 2) {                                 // bade taaron ke gird halki chamak
+        ctx.globalAlpha = tw * .18;
+        ctx.fillRect(x - s.s * 1.5, y - s.s * 1.5, s.s * 3, s.s * 3);
+      }
+      ctx.globalAlpha = tw;
+      ctx.fillRect(x - s.s / 2, y - s.s / 2, s.s, s.s);
+    }
+    ctx.globalAlpha = 1;
+
+    // Tootte taare
+    if (dt > 0 && (nextMeteor -= dt) <= 0) { nextMeteor = 3 + Math.random() * 5; spawnMeteor(); }
+    meteors = meteors.filter(m => (m.life += dt) < m.max);
+    for (const m of meteors) {
+      m.x += m.vx * dt; m.y += m.vy * dt;
+      const fade = Math.sin(Math.PI * m.life / m.max), tx = m.x - m.vx * .16, ty = m.y - m.vy * .16;
+      const grad = ctx.createLinearGradient(m.x, m.y, tx, ty);
+      grad.addColorStop(0, m.col); grad.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.globalAlpha = fade;
+      ctx.strokeStyle = grad; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.lineTo(tx, ty); ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(m.x - 1, m.y - 1, 2, 2);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  resize();
+  if (REDUCED_MOTION) {
+    draw(0, 0, 0);
+    window.addEventListener('resize', () => { resize(); draw(0, 0, 0); });
+    return;
+  }
+  window.addEventListener('resize', resize);
+  let cosmicT = 0, speed = 1, last = performance.now();
+  (function tick(now) {
+    const dt = Math.min(now - last, 64) / 1000;
+    last = now;
+    speed += (orbitTarget - speed) * Math.min(dt * 3, 1);
+    cosmicT += dt * speed;
+    draw(cosmicT, now / 1000, dt);
+    requestAnimationFrame(tick);
+  })(last);
 })();
 
 // Chingari ka dhamaka (x, y) se chaaron taraf
-const SPARK_COLORS = ['#c4b5fd', '#f0abfc', '#93c5fd', '#ffffff', '#a78bfa'];
+const SPARK_COLORS = document.documentElement.dataset.theme === 'rainbow'
+  ? ['#ff3d81', '#ff8a3d', '#ffd23d', '#4ade80', '#22d3ee', '#6c7bff', '#c04dff', '#ffffff']
+  : ['rgb(var(--c1s))', 'rgb(var(--c2))', 'rgb(var(--c3s))', '#ffffff', 'rgb(var(--c1))'];
 function burst(x, y, { count = 28, spread = 260, delay = 0, colors = SPARK_COLORS } = {}) {
   if (REDUCED_MOTION) return;
   const frag = document.createDocumentFragment();
@@ -540,8 +1027,9 @@ async function login(){
     // Success: button green ✓ + sparks → card warp + roshni → app
     btn.classList.remove('loading');
     btn.classList.add('success');
+    orbitTarget = 9;
     const b = btn.getBoundingClientRect(), bx = b.left + b.width / 2, by = b.top + b.height / 2;
-    burst(bx, by, { count: 22, spread: 170, colors: ['#4ade80', '#86efac', '#ffffff', '#c4b5fd'] });
+    burst(bx, by, { count: 22, spread: 170, colors: ['#4ade80', '#86efac', '#ffffff', 'rgb(var(--c1s))'] });
     flashEl.style.setProperty('--fx', bx + 'px');
     flashEl.style.setProperty('--fy', by + 'px');
     setTimeout(() => { wrapEl.classList.add('leaving'); flashEl.classList.add('go'); }, 220);

@@ -52,7 +52,24 @@ aur `.env` me `SMTP_USER` / `SMTP_PASS` bharo.
 
 Manual reminder trigger (admin): `POST /api/admin/run-reminders`
 
-## 📱 WhatsApp (optional)
+## 📱 WhatsApp (optional — ZWhatsapp API)
 
-`.env` me `WHATSAPP_ENABLED=true` + Aumpfy API URL/key bharo
-(ya `whatsapp.config.js` me). Number har user ke `phone` field se jaata hai.
+`.env` me bharo (ya `whatsapp.config.js` me):
+
+```env
+WHATSAPP_ENABLED=true
+ZWA_BASE_URL=https://greenyellow-locust-717944.hostingersite.com
+ZWA_API_KEY=wb_live_...      # ZWhatsapp Dashboard → API Keys
+ZWA_SESSION_ID=              # khali = pehla connected number apne aap
+WHATSAPP_GAP_SEC=60          # har message ke beech gap
+```
+
+- Delegation / checklist assign hote hi user ke `phone` (Users tab) par message
+- Campaign tab ke saare numbers par campaign message
+- Har message ke beech **60 sec** ka gap — sab types milake ek line me.
+  ZWhatsapp key par **1 request / minute** ki limit hai, isliye har API call ek
+  hi gate se guzarti hai. Task messages pehle `WA_Outbox` table me line lagate
+  hain (restart par bhi bache rehte hain) aur campaign se pehle jaate hain.
+- Serverless (Vercel) par outbox campaign wale cron URL se aage badhta hai —
+  cron-job.org par har minute wo URL hit karwao
+- Server start par log me dikhta hai ki key sahi hai aur kaunsa number use hoga
