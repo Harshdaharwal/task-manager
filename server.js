@@ -14,6 +14,14 @@ const SHEET_ID = process.env.SHEET_ID || '';
 
 app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
+// Serverless (Vercel) par setInterval bharose ka nahi — app ki API requests hi
+// WhatsApp outbox ko aage badhati hain (har instance par max 15s me ek baar).
+let _waReqPumpAt = 0;
+app.use('/api', (req, res, next) => {
+  if (Date.now() - _waReqPumpAt < 15000 || req.path.startsWith('/campaigns/cron')) return next();
+  _waReqPumpAt = Date.now();
+  waPump().catch(() => {}).finally(next);
+});
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -1179,6 +1187,7 @@ const waBusy = () => ({ skipped: 'busy', wait: Math.ceil(waGateWaitMs() / 1000) 
 // Returns { id } | { skipped } | { ok: false, status, body } (API error)
 const WA_SENDABLE = ['ACTIVE', 'CONNECTING', 'RATE_LIMITED', 'DISCONNECTED', 'WEBHOOK_ERROR'];
 let _waSession = { id: '', key: '', ts: 0 };
+let _waLimits = null;   // number ki limits (minMessageIntervalSec, maxMessagesPerHour, maxMessagesPerDay) — campaign screen par dikhti hain
 async function waResolveSession(cfg, force) {
   if (cfg.sessionId) return { id: cfg.sessionId };
   if (!force && _waSession.id && _waSession.key === cfg.apiKey && Date.now() - _waSession.ts < 300000) return { id: _waSession.id };
@@ -1196,6 +1205,7 @@ async function waResolveSession(cfg, force) {
   const pick = list.find(s => s.status === 'ACTIVE') || list.find(s => WA_SENDABLE.includes(s.status));
   if (!pick) return { skipped: 'no-session', sessions: list.map(s => `${s.id} (${s.status})`) };
   _waSession = { id: pick.id, key: cfg.apiKey, ts: Date.now(), status: pick.status, phone: pick.phoneNumber || '' };
+  if (pick.limits) _waLimits = pick.limits;
   return { id: pick.id };
 }
 
@@ -1273,7 +1283,8 @@ async function queueWhatsApp(rawPhone, message, kind) {
     ikey: 'tm_' + require('crypto').randomBytes(12).toString('hex'), message_id: '',
     created_at: new Date().toISOString().replace('T', ' ').split('.')[0], sent_at: ''
   });
-  waPump().catch(() => {});   // gate khula ho to pehla message turant
+  // Gate khula ho to pehla message isi request me — Vercel response ke baad function rok deta hai
+  await waPump().catch(() => {});
   return { queued: true, id: row.id };
 }
 
@@ -1330,6 +1341,7 @@ async function waStartupCheck() {
       if (!resp.ok) return console.error(`  ZWhatsapp NOT ready: ${waFailReason({ status: resp.status, body })}`);
       let d = {};
       try { d = JSON.parse(body).data || {}; } catch (e) {}
+      if (d.limits) _waLimits = d.limits;
       const okStatus = WA_SENDABLE.includes(d.status);
       console[okStatus ? 'log' : 'error'](`  ZWhatsapp ${okStatus ? 'ready' : 'NOT ready'} — number ${cfg.sessionId} (${d.phoneNumber || '?'}, ${d.status || '?'})${okStatus ? `, gap ${WA.gapSec || 60}s` : ' — dashboard me number link / reconnect karo'}`);
       return;
@@ -4014,7 +4026,7 @@ app.get('/api/campaigns', requireAuth, requireAdmin, async (req, res) => {
       cronUrl = `${proto}://${req.get('host')}/api/campaigns/cron?key=${encodeURIComponent(await campaignCronKey(d))}`;
     } catch (e) {}
     res.json({
-      gap_sec: CAMPAIGN_GAP_SEC, max_numbers: CAMPAIGN_MAX_NUMBERS, country_code: WA.countryCode, cron_url: cronUrl,
+      gap_sec: CAMPAIGN_GAP_SEC, max_numbers: CAMPAIGN_MAX_NUMBERS, country_code: WA.countryCode, cron_url: cronUrl, wa_limits: _waLimits,
       campaigns: rows.map(c => cpPublic(c, false)).sort((a, b) => b.id - a.id)
     });
   } catch (err) { res.status(500).json({ error: err.message }); }

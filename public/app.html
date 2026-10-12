@@ -1643,7 +1643,7 @@ button:disabled{opacity:.65;cursor:not-allowed !important;}
       <h2>📣 WhatsApp Campaign</h2>
       <div class="cp-limits">
         <span>⏱ <b id="cpGapLbl">60</b> sec gap</span>
-        <span title="Waumfy plan limits">📊 30 / ghanta · 200 / din</span>
+        <span title="ZWhatsapp number limits — inse upar ke messages ZWhatsapp apni line me rakh ke baad me bhejta hai" id="cpLimitLbl">📊 26 / ghanta · 100 / din</span>
       </div>
     </div>
 
@@ -6085,6 +6085,8 @@ async function loadCampaigns() {
   _cpCfg = d;
   _cpList = d.campaigns || [];
   document.getElementById('cpGapLbl').textContent = d.gap_sec;
+  const lim = d.wa_limits;
+  if (lim && lim.maxMessagesPerHour) document.getElementById('cpLimitLbl').textContent = `📊 ${lim.maxMessagesPerHour} / ghanta · ${lim.maxMessagesPerDay} / din`;
   document.getElementById('cpCronUrl').value = d.cron_url || 'Cron link nahi ban paaya (App_Settings table check karo)';
   cpRenderHistory();
   cpRenderNumbers();
